@@ -582,6 +582,10 @@ class TeamsDetailView(ExpandableFieldViewMixin, RetrievePatchAPIView):
         # Note: also deletes all team memberships associated with this team
         team.delete()
         log.info('user %d deleted team %s', request.user.id, team_id)
+        tracker.emit('edx.team.deleted', {
+            'team_id': team_id,
+            'course_id': unicode(team.course_id)
+        })
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

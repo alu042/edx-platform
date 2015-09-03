@@ -1062,11 +1062,28 @@ class DeleteTeamTest(TeamFormActions):
         self.assertNotIn(self.team['name'], browse_teams_page.team_names)
 
     def delete_team(self, **kwargs):
-        """Delete a team. Passes `kwargs` to `confirm_prompt`."""
+        """
+        Delete a team. Passes `kwargs` to `confirm_prompt`.
+        Expects an edx.team.deleted event to be emitted, with correct course_id
+        """
         self.team_page.click_edit_team_button()
         self.team_management_page.wait_for_page()
         self.team_management_page.delete_team_button.click()
-        confirm_prompt(self.team_management_page, **kwargs)
+        
+        if 'cancel' in kwargs and kwargs['cancel'] == True:
+            confirm_prompt(self.team_management_page, **kwargs)
+        else:
+            expected_events = [
+                {
+                    'event_type': 'edx.team.deleted',
+                    'event': {
+                        'course_id': self.course_id,
+                        'team_id': self.team['id']
+                    }
+                }
+            ]
+            with self.assert_events_match_during(event_filter=self.only_team_events, expected_events=expected_events):
+                confirm_prompt(self.team_management_page, **kwargs)
 
     def test_delete_team_updates_topics(self):
         """
