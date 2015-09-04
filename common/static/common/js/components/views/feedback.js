@@ -18,7 +18,7 @@
                     closeIcon: true,  // should we render a close button in the top right corner?
                     minShown: 0,  // length of time after this view has been shown before it can be hidden (milliseconds)
                     maxShown: Infinity,  // length of time after this view has been shown before it will be automatically hidden (milliseconds)
-                    outFocusElm: null,  // element to send focus to on hide
+                    outFocusElm: null  // element to send focus to on hide
 
                 /* Could also have an "actions" hash: here is an example demonstrating
                    the expected structure. For each action, by default the framework
