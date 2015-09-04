@@ -99,12 +99,12 @@
       });
       it("is focused on show", function() {
         var view;
-        view = new AlertView.Confirmation(this.options).show();
+        view = new PromptView.Confirmation(this.options).show();
         return expect(this.inFocusSpy).toHaveBeenCalled();
       });
       it("is not focused on hide", function() {
         var view;
-        view = new AlertView.Confirmation(this.options).hide();
+        view = new PromptView.Confirmation(this.options).hide();
         return expect(this.outFocusSpy).toHaveBeenCalled();
       });
       xit("renders the template", function() {

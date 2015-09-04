@@ -15,7 +15,6 @@
                 return this;
             },
             hide: function () {
-                SystemFeedbackView.prototype.hide.apply(this, arguments);
                 this.$el.slideUp({
                     duration: this.slide_speed
                 });

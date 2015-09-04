@@ -107,12 +107,10 @@
                         this.hideTimeout = setTimeout(_.bind(this.hide, this),
                             this.options.maxShown);
                     }
-                    this.inFocus();
                     return this;
                 },
 
                 hide: function() {
-                    this.outFocus();
                     if (this.shownAt && $.isNumeric(this.options.minShown) &&
                             this.options.minShown > new Date() - this.shownAt) {
                         clearTimeout(this.hideTimeout);
