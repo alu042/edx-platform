@@ -588,12 +588,12 @@ class TeamsDetailView(ExpandableFieldViewMixin, RetrievePatchAPIView):
             'course_id': unicode(team.course_id),
         })
         for member in memberships:
-                tracker.emit('edx.team.learner_removed', {
-                    'team_id': team_id,
-                    'course_id': unicode(team.course_id),
-                    'remove_method': 'team_deleted',
-                    'user_id': member.user_id
-                })
+            tracker.emit('edx.team.learner_removed', {
+                'team_id': team_id,
+                'course_id': unicode(team.course_id),
+                'remove_method': 'team_deleted',
+                'user_id': member.user_id
+            })
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

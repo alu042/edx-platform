@@ -1069,7 +1069,7 @@ class DeleteTeamTest(TeamFormActions):
         """
         Delete a team. Passes `kwargs` to `confirm_prompt`.
         Expects edx.team.deleted event to be emitted, with correct course_id.
-        Also expects edx.team.learner_removed event to be emitted for the 
+        Also expects edx.team.learner_removed event to be emitted for the
         membership that is removed as a part of the delete operation.
         """
 
@@ -1319,14 +1319,13 @@ class EditMembershipTest(TeamFormActions):
             self.edit_membership_page.cancel_delete_membership_dialog()
             self.assertEqual(self.edit_membership_page.team_members, 1)
         else:
-            removed_by = 'self_removal' if role is None else 'removed_by_admin'
             expected_events = [
                 {
                     'event_type': 'edx.team.learner_removed',
                     'event': {
                         'course_id': self.course_id,
                         'team_id': self.team['id'],
-                        'remove_method': removed_by,
+                        'remove_method': 'removed_by_admin',
                         'user_id': self.user_info['user_id']
                     }
                 }

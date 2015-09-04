@@ -817,7 +817,7 @@ class TestDeleteTeamAPI(EventTestMixin, TeamAPITestCase):
             team_id=self.solar_team.team_id,
             course_id=unicode(self.test_course_1.id),
             remove_method='team_deleted',
-            user_id=self.users[user].id
+            user_id=self.users['student_enrolled'].id
         )
         self.assertEqual(CourseTeamMembership.objects.filter(team=self.solar_team).count(), 0)
 
