@@ -2,6 +2,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.images import ImageFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.test.utils import override_settings
 from nose.plugins.attrib import attr
@@ -12,6 +13,7 @@ from certificates.models import (
     ExampleCertificate,
     ExampleCertificateSet,
     CertificateHtmlViewConfiguration,
+    CertificateTemplateAsset,
     BadgeImageConfiguration)
 
 FEATURES_INVALID_FILE_PATH = settings.FEATURES.copy()
@@ -204,3 +206,39 @@ class BadgeImageConfigurationTest(TestCase):
             ValidationError,
             BadgeImageConfiguration(mode='test2', icon=self.get_image('good'), default=True).full_clean
         )
+
+
+@attr('shard_1')
+class CertificateTemplateAssetTest(TestCase):
+    """
+    Test Assets are uploading/saving successfully for CertificateTemplateAsset.
+    """
+    def get_image(self, name):
+        """
+        Get one of the test images from the test data directory.
+        """
+        return ImageFile(open(TEST_DATA_ROOT / 'static' / name + '.jpg'))
+
+    def test_asset_file_saving_with_actual_name(self):
+        """
+        Verify that asset file is saving with actual name, No hash tag should be appended with the asset filename.
+        """
+        test_asset_1 = self.get_image('picture1')
+        CertificateTemplateAsset(description='test description', asset=SimpleUploadedFile(
+            str(test_asset_1).strip("/"),
+            'these are the file contents!')).save()
+        certificate_template_asset = CertificateTemplateAsset.objects.get(id=1)
+        self.assertEqual(certificate_template_asset.asset, 'certificate_template_assets/1/picture1.jpg')
+
+        # Now save asset with same file again, New file will be uploaded after deleting the old one with the same name.
+        certificate_template_asset.asset = SimpleUploadedFile(str(test_asset_1).strip("/"), 'file contents')
+        certificate_template_asset.save()
+        self.assertEqual(certificate_template_asset.asset, 'certificate_template_assets/1/picture1.jpg')
+
+        # Now replace the asset with another file
+        test_asset_2 = self.get_image('picture2')
+        certificate_template_asset.asset = SimpleUploadedFile(str(test_asset_2).strip("/"), 'file contents')
+        certificate_template_asset.save()
+
+        certificate_template_asset = CertificateTemplateAsset.objects.get(id=1)
+        self.assertEqual(certificate_template_asset.asset, 'certificate_template_assets/1/picture2.jpg')
