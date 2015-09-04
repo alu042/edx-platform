@@ -793,6 +793,13 @@ class TestDeleteTeamAPI(EventTestMixin, TeamAPITestCase):
                 team_id=self.solar_team.team_id,
                 course_id=unicode(self.test_course_1.id)
             )
+            self.assert_event_emitted(
+                'edx.team.learner_removed',
+                team_id=self.solar_team.team_id,
+                course_id=unicode(self.test_course_1.id),
+                remove_method='team_deleted',
+                user_id=self.users[user].id
+            )
 
     def test_does_not_exist(self):
         self.delete_team('nonexistent', 404)
@@ -804,6 +811,13 @@ class TestDeleteTeamAPI(EventTestMixin, TeamAPITestCase):
             'edx.team.deleted',
             team_id=self.solar_team.team_id,
             course_id=unicode(self.test_course_1.id)
+        )
+        self.assert_event_emitted(
+            'edx.team.learner_removed',
+            team_id=self.solar_team.team_id,
+            course_id=unicode(self.test_course_1.id),
+            remove_method='team_deleted',
+            user_id=self.users[user].id
         )
         self.assertEqual(CourseTeamMembership.objects.filter(team=self.solar_team).count(), 0)
 

@@ -1009,6 +1009,10 @@ class DeleteTeamTest(TeamFormActions):
 
         self.team = self.create_teams(self.topic, num_teams=1)[0]
         self.team_page = TeamPage(self.browser, self.course_id, team=self.team)
+
+        #need to have a membership to confirm it gets deleted as well
+        self.create_membership(self.user_info['username'], self.team['id'])
+
         self.team_page.visit()
 
     def test_cancel_delete(self):
@@ -1064,13 +1068,16 @@ class DeleteTeamTest(TeamFormActions):
     def delete_team(self, **kwargs):
         """
         Delete a team. Passes `kwargs` to `confirm_prompt`.
-        Expects an edx.team.deleted event to be emitted, with correct course_id
+        Expects edx.team.deleted event to be emitted, with correct course_id.
+        Also expects edx.team.learner_removed event to be emitted for the 
+        membership that is removed as a part of the delete operation.
         """
+
         self.team_page.click_edit_team_button()
         self.team_management_page.wait_for_page()
         self.team_management_page.delete_team_button.click()
-        
-        if 'cancel' in kwargs and kwargs['cancel'] == True:
+
+        if 'cancel' in kwargs and kwargs['cancel'] is True:
             confirm_prompt(self.team_management_page, **kwargs)
         else:
             expected_events = [
@@ -1079,6 +1086,15 @@ class DeleteTeamTest(TeamFormActions):
                     'event': {
                         'course_id': self.course_id,
                         'team_id': self.team['id']
+                    }
+                },
+                {
+                    'event_type': 'edx.team.learner_removed',
+                    'event': {
+                        'course_id': self.course_id,
+                        'team_id': self.team['id'],
+                        'remove_method': 'team_deleted',
+                        'user_id': self.user_info['user_id']
                     }
                 }
             ]
