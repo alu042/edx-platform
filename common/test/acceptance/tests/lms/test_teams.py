@@ -1098,7 +1098,9 @@ class DeleteTeamTest(TeamFormActions):
                     }
                 }
             ]
-            with self.assert_events_match_during(event_filter=self.only_team_events, expected_events=expected_events):
+            with self.assert_events_match_during(
+                event_filter=self.only_team_events, expected_events=expected_events
+            ):
                 confirm_prompt(self.team_management_page, **kwargs)
 
     def test_delete_team_updates_topics(self):
@@ -1289,7 +1291,11 @@ class EditMembershipTest(TeamFormActions):
         self.team_page = TeamPage(self.browser, self.course_id, team=self.team)
 
     def edit_membership_helper(self, role, cancel=False):
-        """ Helper for common functionality in edit membership tests """
+        """
+        Helper for common functionality in edit membership tests.
+        Checks for all relevant assertions about membership being removed,
+        including verify edx.team.learner_removed events are emitted.
+        """
         if role is not None:
             AutoAuthPage(
                 self.browser,
@@ -1313,7 +1319,22 @@ class EditMembershipTest(TeamFormActions):
             self.edit_membership_page.cancel_delete_membership_dialog()
             self.assertEqual(self.edit_membership_page.team_members, 1)
         else:
-            self.edit_membership_page.confirm_delete_membership_dialog()
+            removed_by = 'self_removal' if role is None else 'removed_by_admin'
+            expected_events = [
+                {
+                    'event_type': 'edx.team.learner_removed',
+                    'event': {
+                        'course_id': self.course_id,
+                        'team_id': self.team['id'],
+                        'remove_method': removed_by,
+                        'user_id': self.user_info['user_id']
+                    }
+                }
+            ]
+            with self.assert_events_match_during(
+                event_filter=self.only_team_events, expected_events=expected_events
+            ):
+                self.edit_membership_page.confirm_delete_membership_dialog()
             self.assertEqual(self.edit_membership_page.team_members, 0)
         self.assertTrue(self.edit_membership_page.is_browser_on_page)
 
