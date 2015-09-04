@@ -54,8 +54,8 @@
         this.renderSpy = spyOn(AlertView.Confirmation.prototype, 'render').andCallThrough();
         this.showSpy = spyOn(AlertView.Confirmation.prototype, 'show').andCallThrough();
         this.hideSpy = spyOn(AlertView.Confirmation.prototype, 'hide').andCallThrough();
-        this.inFocusSpy = spyOn(AlertView.Confirmation.prototype, 'inFocus').andCallThrough();
-        this.outFocusSpy = spyOn(AlertView.Confirmation.prototype, 'outFocus').andCallThrough();
+        this.inFocusSpy = spyOn(PromptView.Confirmation.prototype, 'inFocus').andCallThrough();
+        this.outFocusSpy = spyOn(PromptView.Confirmation.prototype, 'outFocus').andCallThrough();
         return this.clock = sinon.useFakeTimers();
       });
       afterEach(function() {
