@@ -121,7 +121,6 @@ def _get_overrides_for_ccx(ccx):
             block_overrides[override.field + "_id"] = override.id
             block_overrides[override.field + "_instance"] = override
 
-
         overrides_cache[ccx] = overrides
 
     return overrides_cache[ccx]
@@ -137,7 +136,7 @@ def override_field_for_ccx(ccx, block, name, value):
     field = block.fields[name]
     value_json = field.to_json(value)
     serialized_value = json.dumps(value_json)
-    kwargs = {'ccx':ccx, 'location':block.location, 'field':name}
+    kwargs = {'ccx': ccx, 'location': block.location, 'field': name}
     has_changes = False
 
     # Get ccx field instance from hash
@@ -148,11 +147,11 @@ def override_field_for_ccx(ccx, block, name, value):
     if not override:
         try:
             override = CcxFieldOverride.objects.create(
-                    ccx=ccx,
-                    location=block.location,
-                    field=name,
-                    value=serialized_value
-                )
+                ccx=ccx,
+                location=block.location,
+                field=name,
+                value=serialized_value
+            )
         except IntegrityError:
             transaction.commit()
             ccx_field_id = get_override_for_ccx(ccx, block, name + "_id")
@@ -162,7 +161,6 @@ def override_field_for_ccx(ccx, block, name, value):
             has_changes = serialized_value != override.value
 
     if has_changes:
-        transaction.commit()
         override.value = serialized_value
         override.save()
     _get_overrides_for_ccx(ccx).setdefault(block.location, {})[name] = value_json
@@ -186,6 +184,7 @@ def clear_override_for_ccx(ccx, block, name):
     except CcxFieldOverride.DoesNotExist:
         pass
 
+
 def remove_from_overrides(ccx, block, name):
     # Remove field from ccx overrides
     try:
@@ -195,6 +194,7 @@ def remove_from_overrides(ccx, block, name):
         override_map.pop(name + "_instance")
     except KeyError:
         pass
+
 
 def bulk_delete_ccx_fields(ccx, ids=[]):
     # Bulk delete for CcxFieldOverride fields
