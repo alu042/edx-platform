@@ -4801,7 +4801,7 @@ msgstr ""
 #: lms/templates/student_account/login.underscore
 #: lms/templates/student_account/register.underscore
 msgid "Sign in"
-msgstr ""
+msgstr "Logg inn"
 
 #: lms/templates/student_account/login.underscore
 msgid "or sign in with"

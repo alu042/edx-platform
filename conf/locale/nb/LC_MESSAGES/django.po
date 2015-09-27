@@ -9004,7 +9004,7 @@ msgstr ""
 
 #: lms/templates/navigation-edx.html lms/templates/navigation.html
 msgid "Sign in"
-msgstr ""
+msgstr "Logg inn"
 
 #: lms/templates/navigation-edx.html lms/templates/navigation.html
 msgid ""
@@ -14388,7 +14388,7 @@ msgstr ""
 
 #: lms/templates/student_account/login_and_register.html
 msgid "Sign in or Register"
-msgstr ""
+msgstr "Logg inn eller registrer deg"
 
 #: lms/templates/student_profile/index.html
 msgid "Student Profile"
@@ -15155,7 +15155,7 @@ msgstr ""
 
 #: cms/templates/activation_active.html cms/templates/activation_complete.html
 msgid "Sign into {studio_name}"
-msgstr ""
+msgstr "Logg inn på {studio_name}"
 
 #: cms/templates/activation_complete.html
 msgid "Your account activation is complete!"
@@ -16916,7 +16916,7 @@ msgstr ""
 
 #: cms/templates/login.html cms/templates/widgets/header.html
 msgid "Sign In"
-msgstr ""
+msgstr "Logg inn"
 
 #: cms/templates/login.html
 msgid "Sign In to {studio_name}"
@@ -18457,7 +18457,7 @@ msgstr "Ny artikkel opprettet: %s"
 
 #: wiki/views/accounts.py
 msgid "You are now sign up... and now you can sign in!"
-msgstr "Du er nå registrert.. og du kan nå logge inn!"
+msgstr "Du er nå registrert.. og du kan logge inn!"
 
 #: wiki/views/accounts.py
 msgid "You are no longer logged in. Bye bye!"
