@@ -11349,7 +11349,7 @@ msgstr "Skjul"
 #: lms/templates/discussion/_thread_list_template.html
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Discussion topics; current selection is: "
-msgstr "Diskusjonstema; gjeldende valg er: ""
+msgstr "Diskusjonstema; gjeldende valg er: "
 
 #: lms/templates/discussion/_thread_list_template.html
 msgid "Search all posts"
