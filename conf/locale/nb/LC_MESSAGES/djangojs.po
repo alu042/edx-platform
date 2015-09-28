@@ -4805,11 +4805,11 @@ msgstr "Logg inn"
 
 #: lms/templates/student_account/login.underscore
 msgid "or sign in with"
-msgstr ""
+msgstr "eller logg inn med"
 
 #: lms/templates/student_account/login.underscore
 msgid "New to %(platformName)s?"
-msgstr ""
+msgstr "Ny på %(platformName)s?"
 
 #: lms/templates/student_account/login.underscore
 msgid "Create an account"

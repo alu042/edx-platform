@@ -121,7 +121,7 @@ msgstr "Avansert"
 #: cms/djangoapps/contentstore/views/entrance_exam.py
 #: lms/djangoapps/courseware/tabs.py cms/templates/settings.html
 msgid "Entrance Exam"
-msgstr ""
+msgstr "Opptakseksamen"
 
 #: cms/djangoapps/contentstore/views/helpers.py
 #: lms/djangoapps/class_dashboard/dashboard_data.py
@@ -130,7 +130,7 @@ msgstr ""
 #: lms/templates/instructor/instructor_dashboard_2/metrics.html
 #, fuzzy
 msgid "Section"
-msgstr ""
+msgstr "Seksjon"
 "#-#-#-#-#  django-partial.po (edx-platform)  #-#-#-#-#\n"
 "Seksjon\n"
 "#-#-#-#-#  mako.po (edx-platform)  #-#-#-#-#\n"
@@ -139,7 +139,7 @@ msgstr ""
 #: cms/djangoapps/contentstore/views/helpers.py
 #: lms/djangoapps/class_dashboard/dashboard_data.py
 msgid "Subsection"
-msgstr "Subsection"
+msgstr "Delseksjon"
 
 #: cms/djangoapps/contentstore/views/helpers.py
 #: lms/djangoapps/instructor/views/tools.py
@@ -198,7 +198,7 @@ msgstr ""
 #: common/djangoapps/course_modes/models.py
 #: lms/templates/instructor/instructor_dashboard_2/course_info.html
 msgid "Verified"
-msgstr ""
+msgstr "Verifisert"
 
 #: common/djangoapps/course_modes/models.py
 #: lms/templates/dashboard/_dashboard_course_listing.html
@@ -3180,7 +3180,7 @@ msgstr ""
 #: common/lib/xmodule/xmodule/modulestore/inheritance.py
 #: lms/templates/ccx/schedule.html
 msgid "Due Date"
-msgstr ""
+msgstr "Frist"
 
 #: common/lib/xmodule/xmodule/seq_module.py
 msgid "Enter the date by which problems are due."
@@ -4319,12 +4319,12 @@ msgstr "Brukernavn"
 #: lms/djangoapps/class_dashboard/dashboard_data.py
 #: lms/templates/instructor/instructor_dashboard_2/metrics.html
 msgid "Grade"
-msgstr ""
+msgstr "Karakter"
 
 #: lms/djangoapps/class_dashboard/dashboard_data.py
 #: lms/templates/instructor/instructor_dashboard_2/metrics.html
 msgid "Percent"
-msgstr ""
+msgstr "Prosent"
 
 #: lms/djangoapps/class_dashboard/dashboard_data.py
 msgid "Opened by this number of students"
@@ -4332,7 +4332,7 @@ msgstr ""
 
 #: lms/djangoapps/class_dashboard/dashboard_data.py
 msgid "subsections"
-msgstr ""
+msgstr "delseksjoner"
 
 #: lms/djangoapps/class_dashboard/dashboard_data.py
 msgid "Count of Students"
@@ -4368,7 +4368,7 @@ msgstr "Kursside automatisk opprettet"
 
 #: lms/djangoapps/course_wiki/views.py
 msgid "Welcome to the {platform_name} Wiki"
-msgstr ""
+msgstr "Velkommen til {platform_name} Wiki"
 
 #: lms/djangoapps/course_wiki/views.py
 msgid "Visit a course wiki to add an article."
@@ -4392,12 +4392,12 @@ msgstr ""
 #. MIT, and Dartmouth).
 #: lms/djangoapps/courseware/views.py
 msgid "{first_institutions}, and {last_institution}"
-msgstr ""
+msgstr "{first_institutions}, og {last_institution}"
 
 #. Translators: The join of two institution names (e.g., Harvard and MIT).
 #: lms/djangoapps/courseware/views.py
 msgid "{first_institution} and {second_institution}"
-msgstr ""
+msgstr "{first_institution} og {second_institution}"
 
 #: lms/djangoapps/courseware/views.py
 msgid ""
@@ -4415,7 +4415,7 @@ msgstr ""
 
 #: lms/djangoapps/courseware/views.py
 msgid "User {username} does not exist."
-msgstr ""
+msgstr "Bruker {username} finnes ikke"
 
 #: lms/djangoapps/courseware/views.py
 msgid "User {username} has never accessed problem {location}"
@@ -4427,7 +4427,7 @@ msgstr ""
 
 #: lms/djangoapps/courseware/views.py
 msgid "Course is not valid"
-msgstr ""
+msgstr "Kurset er ikke gyldig"
 
 #: lms/djangoapps/courseware/views.py
 msgid "Your certificate will be available when you pass the course."
@@ -4505,7 +4505,7 @@ msgstr "Kurs-ID"
 
 #: lms/djangoapps/dashboard/support.py
 msgid "User not found"
-msgstr ""
+msgstr "Bruker ikke funnet"
 
 #: lms/djangoapps/dashboard/support.py
 msgid "Course {course_id} not past the refund window."
@@ -4563,7 +4563,7 @@ msgstr "Må oppgi fullt navn"
 #. Translators: Domain is an email domain, such as "@gmail.com"
 #: lms/djangoapps/dashboard/sysadmin.py
 msgid "Email address must end in {domain}"
-msgstr ""
+msgstr "Epostadressen må ende med {domain}"
 
 #: lms/djangoapps/dashboard/sysadmin.py
 msgid "Failed - email {email_addr} already exists as {external_id}"
@@ -8842,7 +8842,7 @@ msgstr "Husk meg"
 #. authentication provider (like Google or LinkedIn).
 #: lms/templates/login.html
 msgid "Sign in with {provider_name}"
-msgstr ""
+msgstr "Logg inn med {provider_name}"
 
 #. Translators:  "External resource" means that this learning module is hosted
 #. on a platform external to the edX LMS
@@ -11349,11 +11349,11 @@ msgstr "Skjul"
 #: lms/templates/discussion/_thread_list_template.html
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Discussion topics; current selection is: "
-msgstr ""
+msgstr "Diskusjonstema; gjeldende valg er: ""
 
 #: lms/templates/discussion/_thread_list_template.html
 msgid "Search all posts"
-msgstr ""
+msgstr "Søk i alle innlegg"
 
 #. Translators: This labels a filter menu in forum navigation
 #: lms/templates/discussion/_thread_list_template.html
@@ -11363,12 +11363,12 @@ msgstr ""
 #. Translators: This is a menu option for showing all forum threads unfiltered
 #: lms/templates/discussion/_thread_list_template.html
 msgid "Show all"
-msgstr ""
+msgstr "Vis alle"
 
 #. Translators: This is a menu option for showing only unread forum threads
 #: lms/templates/discussion/_thread_list_template.html
 msgid "Unread"
-msgstr ""
+msgstr "Ulest"
 
 #. Translators: This is a menu option for showing only forum threads flagged
 #. for abuse
@@ -11388,26 +11388,26 @@ msgstr ""
 #. Translators: This labels a sort menu in forum navigation
 #: lms/templates/discussion/_thread_list_template.html
 msgid "Sort:"
-msgstr ""
+msgstr "Sorter:"
 
 #. Translators: This is a menu option for sorting forum threads
 #: lms/templates/discussion/_thread_list_template.html
 msgid "by recent activity"
-msgstr ""
+msgstr "etter sist aktiv"
 
 #. Translators: This is a menu option for sorting forum threads
 #: lms/templates/discussion/_thread_list_template.html
 msgid "by most activity"
-msgstr ""
+msgstr "etter mest aktiv"
 
 #. Translators: This is a menu option for sorting forum threads
 #: lms/templates/discussion/_thread_list_template.html
 msgid "by most votes"
-msgstr ""
+msgstr "etter flest stemmer"
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Add A Response"
-msgstr ""
+msgstr "Legg til svar"
 
 #: lms/templates/discussion/_underscore_templates.html
 #: lms/templates/discussion/mustache/_profile_thread.mustache
@@ -11416,7 +11416,7 @@ msgstr "Denne tråden er stengt."
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Post a response:"
-msgstr ""
+msgstr "Legg til et svar"
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Expand discussion"
@@ -11428,11 +11428,11 @@ msgstr ""
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Editing post"
-msgstr ""
+msgstr "Editerer innlegg"
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Edit post title"
-msgstr ""
+msgstr "Editerer tittel"
 
 #: lms/templates/discussion/_underscore_templates.html wiki/forms.py
 msgid "Title"
@@ -11444,7 +11444,7 @@ msgstr "Oppdater innlegg"
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Show Comments (%(num_comments)s)"
-msgstr ""
+msgstr "Vis kommentarer (%(num_comments)s)"
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Add a comment"
@@ -11468,15 +11468,15 @@ msgstr ""
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Reported"
-msgstr ""
+msgstr "Rapportert"
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Editing response"
-msgstr ""
+msgstr "Editerer svar"
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Update response"
-msgstr ""
+msgstr "Oppdater svar"
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "posted %(time_ago)s by %(author)s"
@@ -11492,7 +11492,7 @@ msgstr ""
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "discussion"
-msgstr ""
+msgstr "diskusjon"
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "answered question"
@@ -11534,7 +11534,7 @@ msgstr ""
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "How to use {platform_name} discussions"
-msgstr ""
+msgstr "Hvordan bruke {platform_name}-diskusjoner"
 
 #: lms/templates/discussion/_underscore_templates.html
 msgid "Find discussions"
@@ -11774,7 +11774,7 @@ msgstr "Aktive tråder"
 
 #: lms/templates/edxnotes/edxnotes.html
 msgid "Student Notes"
-msgstr ""
+msgstr "Studentnotater"
 
 #: lms/templates/edxnotes/edxnotes.html
 msgid "Highlights and notes you've made in course content"
@@ -16920,7 +16920,7 @@ msgstr "Logg inn"
 
 #: cms/templates/login.html
 msgid "Sign In to {studio_name}"
-msgstr ""
+msgstr "Logg inn på {studio_name}"
 
 #: cms/templates/login.html
 msgid "Don't have a {studio_name} Account? Sign up!"
@@ -18461,7 +18461,7 @@ msgstr "Du er nå registrert.. og du kan logge inn!"
 
 #: wiki/views/accounts.py
 msgid "You are no longer logged in. Bye bye!"
-msgstr "Du er ikke lengre registrert... Hadet!"
+msgstr "Du er ikke lengre registrert... Ha det!"
 
 #: wiki/views/accounts.py
 msgid "You are now logged in! Have fun!"
