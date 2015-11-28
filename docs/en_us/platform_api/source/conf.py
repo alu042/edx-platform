@@ -58,10 +58,6 @@ MOCK_MODULES = [
     'opaque_keys.edx.locations',
     'SlashSeparatedCourseKey',
     'Locator',
-    'south',
-    'modelsinspector',
-    'south.modelsinspector',
-    'add_introspection_rules',
     'courseware',
     'access',
     'courseware.access',
@@ -84,9 +80,9 @@ MOCK_MODULES = [
     'ratelimitbackend',
     'analytics',
     'courseware.courses',
-    'staticfiles',
+    'django.contrib.staticfiles',
     'storage',
-    'staticfiles.storage',
+    'django.contrib.staticfiles.storage',
     'content',
     'xmodule.contentstore',
     'xmodule.contentstore.content',
@@ -186,14 +182,15 @@ MOCK_MODULES = [
     'xmodule.course_module',
     'user_api.accounts.api',
     'user_api.accounts.serializers',
-    'ecommerce_api_client',
+    'edx_rest_api_client',
     'client',
-    'ecommerce_api_client.client',
-    'ecommerce_api_client.exceptions',
+    'edx_rest_api_client.client',
+    'edx_rest_api_client.exceptions',
     'student.auth',
     'ccx_keys',
     'ccx_keys.locator',
-    'user_api.preferences.api'
+    'user_api.preferences.api',
+    'rest_framework_oauth.authentication'
 ]
 
 for mod_name in MOCK_MODULES:
@@ -273,7 +270,7 @@ extensions = [
     'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.pngmath',
     'sphinx.ext.mathjax', 'sphinx.ext.viewcode', 'sphinxcontrib.napoleon']
 
-project = u'EdX Platform APIs'
+project = u'Open edX Platform APIs'
 copyright = u'2015, edX'
 
 exclude_patterns = ['build', 'links.rst']

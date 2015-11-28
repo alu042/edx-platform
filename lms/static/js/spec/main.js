@@ -6,6 +6,7 @@
             'codemirror': 'xmodule_js/common_static/js/vendor/CodeMirror/codemirror',
             'jquery': 'xmodule_js/common_static/js/vendor/jquery.min',
             'jquery.ui': 'xmodule_js/common_static/js/vendor/jquery-ui.min',
+            'jquery.eventDrag': 'xmodule_js/common_static/js/vendor/jquery.event.drag-2.2',
             'jquery.flot': 'xmodule_js/common_static/js/vendor/flot/jquery.flot.min',
             'jquery.form': 'xmodule_js/common_static/js/vendor/jquery.form',
             'jquery.markitup': 'xmodule_js/common_static/js/vendor/markitup/jquery.markitup',
@@ -40,7 +41,7 @@
             'xmodule': 'xmodule_js/src/xmodule',
             'utility': 'xmodule_js/common_static/js/src/utility',
             'accessibility': 'xmodule_js/common_static/js/src/accessibility_tools',
-            'sinon': 'xmodule_js/common_static/js/vendor/sinon-1.7.1',
+            'sinon': 'xmodule_js/common_static/js/vendor/sinon-1.17.0',
             'squire': 'xmodule_js/common_static/js/vendor/Squire',
             'jasmine-jquery': 'xmodule_js/common_static/js/vendor/jasmine-jquery',
             'jasmine-imagediff': 'xmodule_js/common_static/js/vendor/jasmine-imagediff',
@@ -48,9 +49,8 @@
             'jasmine.async': 'xmodule_js/common_static/js/vendor/jasmine.async',
             'draggabilly': 'xmodule_js/common_static/js/vendor/draggabilly.pkgd',
             'domReady': 'xmodule_js/common_static/js/vendor/domReady',
-            'mathjax': '//cdn.mathjax.org/mathjax/2.4-latest/MathJax.js?config=TeX-MML-AM_HTMLorMML-full&delayStartupUntil=configured',
+            'mathjax': '//cdn.mathjax.org/mathjax/2.5-latest/MathJax.js?config=TeX-MML-AM_HTMLorMML-full&delayStartupUntil=configured', // jshint ignore:line
             'youtube': '//www.youtube.com/player_api?noext',
-            'tender': '//api.tenderapp.com/tender_widget',
             'coffee/src/ajax_prefix': 'xmodule_js/common_static/coffee/src/ajax_prefix',
             'coffee/src/instructor_dashboard/student_admin': 'coffee/src/instructor_dashboard/student_admin',
             'xmodule_js/common_static/js/test/add_ajax_prefix': 'xmodule_js/common_static/js/test/add_ajax_prefix',
@@ -71,6 +71,7 @@
             'history': 'js/vendor/history',
             'js/staff_debug_actions': 'js/staff_debug_actions',
             'js/vendor/jquery.qubit': 'js/vendor/jquery.qubit',
+            'js/utils/navigation': 'js/utils/navigation',
 
             // Backbone classes loaded explicitly until they are converted to use RequireJS
             'js/models/notification': 'js/models/notification',
@@ -89,7 +90,9 @@
             'annotator_1.2.9': 'xmodule_js/common_static/js/vendor/edxnotes/annotator-full.min',
 
             // Common edx utils
-            'js/utils/edx.utils.validate': 'xmodule_js/common_static/js/utils/edx.utils.validate'
+            'common/js/utils/edx.utils.validate': 'xmodule_js/common_static/common/js/utils/edx.utils.validate',
+            'slick.grid': 'xmodule_js/common_static/js/vendor/slick.grid',
+            'slick.core': 'xmodule_js/common_static/js/vendor/slick.core'
         },
         shim: {
             'gettext': {
@@ -290,6 +293,10 @@
                 exports: 'coffee/src/instructor_dashboard/student_admin',
                 deps: ['jquery', 'underscore', 'coffee/src/instructor_dashboard/util', 'string_utils']
             },
+            'js/instructor_dashboard/certificates': {
+                exports: 'js/instructor_dashboard/certificates',
+                deps: ['jquery', 'gettext', 'underscore']
+            },
             // LMS class loaded explicitly until they are converted to use RequireJS
             'js/student_account/account': {
                 exports: 'js/student_account/account',
@@ -309,7 +316,7 @@
             },
             'js/ccx/schedule': {
                 exports: 'js/ccx/schedule',
-                deps: ['jquery', 'underscore', 'backbone', 'gettext']
+                deps: ['jquery', 'underscore', 'backbone', 'gettext', 'moment']
             },
 
             // Backbone classes loaded explicitly until they are converted to use RequireJS
@@ -635,10 +642,13 @@
         'lms/include/js/spec/views/notification_spec.js',
         'lms/include/js/spec/views/file_uploader_spec.js',
         'lms/include/js/spec/dashboard/donation.js',
+        'lms/include/js/spec/dashboard/track_events_spec.js',
         'lms/include/js/spec/groups/views/cohorts_spec.js',
         'lms/include/js/spec/shoppingcart/shoppingcart_spec.js',
         'lms/include/js/spec/instructor_dashboard/ecommerce_spec.js',
         'lms/include/js/spec/instructor_dashboard/student_admin_spec.js',
+        'lms/include/js/spec/instructor_dashboard/certificates_exception_spec.js',
+        'lms/include/js/spec/instructor_dashboard/certificates_spec.js',
         'lms/include/js/spec/student_account/account_spec.js',
         'lms/include/js/spec/student_account/access_spec.js',
         'lms/include/js/spec/student_account/logistration_factory_spec.js',
@@ -687,6 +697,7 @@
         'lms/include/js/spec/edxnotes/plugins/caret_navigation_spec.js',
         'lms/include/js/spec/edxnotes/collections/notes_spec.js',
         'lms/include/js/spec/search/search_spec.js',
+        'lms/include/js/spec/navigation_spec.js',
         'lms/include/js/spec/discovery/collections/filters_spec.js',
         'lms/include/js/spec/discovery/models/course_card_spec.js',
         'lms/include/js/spec/discovery/models/course_directory_spec.js',

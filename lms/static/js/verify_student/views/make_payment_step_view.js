@@ -17,6 +17,7 @@ var edx = edx || {};
                 isActive: true,
                 suggestedPrices: [],
                 minPrice: 0,
+                sku: '',
                 currency: 'usd',
                 upgrade: false,
                 verificationDeadline: '',
@@ -104,10 +105,20 @@ var edx = edx || {};
                 self._getProductText( templateContext.courseModeSlug, templateContext.upgrade )
             );
 
-            // create a button for each payment processor
-            _.each(processors.reverse(), function(processorName) {
-                $( 'div.payment-buttons' ).append( self._getPaymentButtonHtml(processorName) );
-            });
+            if (processors.length === 0) {
+                // No payment processors are enabled at the moment, so show an error message
+                this.errorModel.set({
+                    errorTitle: gettext('All payment options are currently unavailable.'),
+                    errorMsg: gettext('Try the transaction again in a few minutes.'),
+                    shown: true
+                })
+            }
+            else {
+                // create a button for each payment processor
+                _.each(processors.reverse(), function(processorName) {
+                    $( 'div.payment-buttons' ).append( self._getPaymentButtonHtml(processorName) );
+                });
+            }
 
             // Handle payment submission
             $( '.payment-button' ).on( 'click', _.bind( this.createOrder, this ) );
@@ -133,7 +144,8 @@ var edx = edx || {};
                 postData = {
                     'processor': event.target.id,
                     'contribution': paymentAmount,
-                    'course_id': this.stepData.courseKey
+                    'course_id': this.stepData.courseKey,
+                    'sku': this.templateContext().sku
                 };
 
             // Disable the payment button to prevent multiple submissions

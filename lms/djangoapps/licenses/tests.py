@@ -12,7 +12,7 @@ from django.test import TestCase
 from django.test.client import Client
 from django.core.management import call_command
 from django.core.urlresolvers import reverse
-from nose.tools import assert_true  # pylint: disable=no-name-in-module
+from nose.tools import assert_true
 
 from licenses.models import CourseSoftware, UserLicense
 
@@ -32,7 +32,8 @@ log = logging.getLogger(__name__)
 
 class CourseSoftwareFactory(DjangoModelFactory):
     '''Factory for generating CourseSoftware objects in database'''
-    FACTORY_FOR = CourseSoftware
+    class Meta(object):
+        model = CourseSoftware
 
     name = SOFTWARE_1
     full_name = SOFTWARE_1
@@ -47,7 +48,8 @@ class UserLicenseFactory(DjangoModelFactory):
     By default, the user assigned is null, indicating that the
     serial number has not yet been assigned.
     '''
-    FACTORY_FOR = UserLicense
+    class Meta(object):
+        model = UserLicense
 
     user = None
     software = factory.SubFactory(CourseSoftwareFactory)

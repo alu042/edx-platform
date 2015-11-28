@@ -5,8 +5,6 @@ from django.conf.urls import patterns, include, url
 from ratelimitbackend import admin
 admin.autodiscover()
 
-# pylint: disable=bad-continuation
-
 # Pattern to match a course key or a library key
 COURSELIKE_KEY_PATTERN = r'(?P<course_key_string>({}|{}))'.format(
     r'[^/]+/[^/]+/[^/]+', r'[^/:]+:[^/+]+\+[^/+]+(\+[^/]+)?'
@@ -32,7 +30,7 @@ urlpatterns = patterns(
         'contentstore.views.component_handler', name='component_handler'),
 
     url(r'^xblock/resource/(?P<block_type>[^/]*)/(?P<uri>.*)$',
-        'contentstore.views.xblock.xblock_resource', name='xblock_resource_url'),
+        'openedx.core.djangoapps.common_views.xblock.xblock_resource', name='xblock_resource_url'),
 
     # temporary landing page for a course
     url(r'^edge/(?P<org>[^/]+)/(?P<course>[^/]+)/course/(?P<coursename>[^/]+)$',

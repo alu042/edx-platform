@@ -1,5 +1,8 @@
 """ Search index used to load data into elasticsearch"""
 
+import logging
+from elasticsearch.exceptions import ConnectionError
+
 from django.conf import settings
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -7,8 +10,11 @@ from django.utils import translation
 from functools import wraps
 
 from search.search_engine_base import SearchEngine
+from request_cache import get_request_or_stub
 
-from .serializers import CourseTeamSerializer, CourseTeam
+from .errors import ElasticSearchConnectionError
+from lms.djangoapps.teams.models import CourseTeam
+from .serializers import CourseTeamSerializer
 
 
 def if_search_enabled(f):
@@ -43,7 +49,15 @@ class CourseTeamIndexer(object):
 
         Returns serialized object with additional search fields.
         """
-        serialized_course_team = CourseTeamSerializer(self.course_team).data
+        # Django Rest Framework v3.1 requires that we pass the request to the serializer
+        # so it can construct hyperlinks.  To avoid changing the interface of this object,
+        # we retrieve the request from the request cache.
+        context = {
+            "request": get_request_or_stub()
+        }
+
+        serialized_course_team = CourseTeamSerializer(self.course_team, context=context).data
+
         # Save the primary key so we can load the full objects easily after we search
         serialized_course_team['pk'] = self.course_team.pk
         # Don't save the membership relations in elasticsearch
@@ -103,8 +117,11 @@ class CourseTeamIndexer(object):
         """
         Return course team search engine (if feature is enabled).
         """
-        if cls.search_is_enabled():
+        try:
             return SearchEngine.get_search_engine(index=cls.INDEX_NAME)
+        except ConnectionError as err:
+            logging.error('Error connecting to elasticsearch: %s', err)
+            raise ElasticSearchConnectionError
 
     @classmethod
     def search_is_enabled(cls):
@@ -119,7 +136,10 @@ def course_team_post_save_callback(**kwargs):
     """
     Reindex object after save.
     """
-    CourseTeamIndexer.index(kwargs['instance'])
+    try:
+        CourseTeamIndexer.index(kwargs['instance'])
+    except ElasticSearchConnectionError:
+        pass
 
 
 @receiver(post_delete, sender=CourseTeam, dispatch_uid='teams.signals.course_team_post_delete_callback')
@@ -127,4 +147,7 @@ def course_team_post_delete_callback(**kwargs):  # pylint: disable=invalid-name
     """
     Reindex object after delete.
     """
-    CourseTeamIndexer.remove(kwargs['instance'])
+    try:
+        CourseTeamIndexer.remove(kwargs['instance'])
+    except ElasticSearchConnectionError:
+        pass

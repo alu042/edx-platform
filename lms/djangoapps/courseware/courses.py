@@ -1,9 +1,15 @@
+"""
+Functions for accessing and displaying courses within the
+courseware.
+"""
+from datetime import datetime
 from collections import defaultdict
 from fs.errors import ResourceNotFoundError
 import logging
 import inspect
 
 from path import Path as path
+import pytz
 from django.http import Http404
 from django.conf import settings
 
@@ -19,6 +25,13 @@ from xmodule.x_module import STUDENT_VIEW
 from microsite_configuration import microsite
 
 from courseware.access import has_access
+from courseware.date_summary import (
+    CourseEndDate,
+    CourseStartDate,
+    TodaysDate,
+    VerificationDeadlineDate,
+    VerifiedUpgradeDeadlineDate,
+)
 from courseware.model_data import FieldDataCache
 from courseware.module_render import get_module
 from lms.djangoapps.courseware.courseware_access_exception import CoursewareAccessException
@@ -27,22 +40,8 @@ import branding
 
 from opaque_keys.edx.keys import UsageKey
 
+
 log = logging.getLogger(__name__)
-
-
-def get_request_for_thread():
-    """Walk up the stack, return the nearest first argument named "request"."""
-    frame = None
-    try:
-        for f in inspect.stack()[1:]:
-            frame = f[0]
-            code = frame.f_code
-            if code.co_varnames[:1] == ("request",):
-                return frame.f_locals["request"]
-            elif code.co_varnames[:2] == ("self", "request",):
-                return frame.f_locals["request"]
-    finally:
-        del frame
 
 
 def get_course(course_id, depth=0):
@@ -164,7 +163,7 @@ def get_course_university_about_section(course):  # pylint: disable=invalid-name
     return course.display_org_with_default
 
 
-def get_course_about_section(course, section_key):
+def get_course_about_section(request, course, section_key):
     """
     This returns the snippet of html to be rendered on the course about page,
     given the key for the section.
@@ -192,17 +191,30 @@ def get_course_about_section(course, section_key):
     # markup. This can change without effecting this interface when we find a
     # good format for defining so many snippets of text/html.
 
-    # TODO: Remove number, instructors from this list
-    if section_key in ['short_description', 'description', 'key_dates', 'video',
-                       'course_staff_short', 'course_staff_extended',
-                       'requirements', 'syllabus', 'textbook', 'faq', 'more_info',
-                       'number', 'instructors', 'overview',
-                       'effort', 'end_date', 'prerequisites', 'ocw_links']:
+    # TODO: Remove number, instructors from this set
+    html_sections = {
+        'short_description',
+        'description',
+        'key_dates',
+        'video',
+        'course_staff_short',
+        'course_staff_extended',
+        'requirements',
+        'syllabus',
+        'textbook',
+        'faq',
+        'more_info',
+        'number',
+        'instructors',
+        'overview',
+        'effort',
+        'end_date',
+        'prerequisites',
+        'ocw_links'
+    }
 
+    if section_key in html_sections:
         try:
-
-            request = get_request_for_thread()
-
             loc = course.location.replace(category='about', name=section_key)
 
             # Use an empty cache
@@ -299,6 +311,43 @@ def get_course_info_section(request, course, section_key):
             )
 
     return html
+
+
+def get_course_date_summary(course, user):
+    """
+    Return the snippet of HTML to be included on the course info page
+    in the 'Date Summary' section.
+    """
+    blocks = _get_course_date_summary_blocks(course, user)
+    return '\n'.join(
+        b.render() for b in blocks
+    )
+
+
+def _get_course_date_summary_blocks(course, user):
+    """
+    Return the list of blocks to display on the course info page,
+    sorted by date.
+    """
+    block_classes = (
+        CourseEndDate,
+        CourseStartDate,
+        TodaysDate,
+        VerificationDeadlineDate,
+        VerifiedUpgradeDeadlineDate,
+    )
+
+    blocks = (cls(course, user) for cls in block_classes)
+
+    def block_key_fn(block):
+        """
+        If the block's date is None, return the maximum datetime in order
+        to force it to the end of the list of displayed blocks.
+        """
+        if block.date is None:
+            return datetime.max.replace(tzinfo=pytz.UTC)
+        return block.date
+    return sorted((b for b in blocks if b.is_enabled), key=block_key_fn)
 
 
 # TODO: Fix this such that these are pulled in as extra course-specific tabs.
