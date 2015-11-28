@@ -14,6 +14,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
+from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest, Http404
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
@@ -29,14 +30,14 @@ from eventtracking import tracker
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey, UsageKey
 
-from commerce import ecommerce_api_client
 from commerce.utils import audit_log
 from course_modes.models import CourseMode
 from courseware.url_helpers import get_redirect_url
-from ecommerce_api_client.exceptions import SlumberBaseException
+from edx_rest_api_client.exceptions import SlumberBaseException
 from edxmako.shortcuts import render_to_response, render_to_string
 from embargo import api as embargo_api
 from microsite_configuration import microsite
+from openedx.core.djangoapps.commerce.utils import ecommerce_api_client
 from openedx.core.djangoapps.user_api.accounts import NAME_MIN_LENGTH
 from openedx.core.djangoapps.user_api.accounts.api import update_account_settings
 from openedx.core.djangoapps.user_api.errors import UserNotFound, AccountValidationError
@@ -46,18 +47,20 @@ from shoppingcart.models import Order, CertificateItem
 from shoppingcart.processors import (
     get_signed_purchase_params, get_purchase_endpoint
 )
-from verify_student.ssencrypt import has_valid_signature
-from verify_student.models import (
+from lms.djangoapps.verify_student.ssencrypt import has_valid_signature
+from lms.djangoapps.verify_student.models import (
     VerificationDeadline,
     SoftwareSecurePhotoVerification,
     VerificationCheckpoint,
     VerificationStatus,
+    IcrvStatusEmailsConfiguration,
 )
-from verify_student.image import decode_image_data, InvalidImageData
+from lms.djangoapps.verify_student.image import decode_image_data, InvalidImageData
 from util.json_request import JsonResponse
 from util.date_utils import get_default_time_display
+from util.db import outer_atomic
 from xmodule.modulestore.django import modulestore
-from staticfiles.storage import staticfiles_storage
+from django.contrib.staticfiles.storage import staticfiles_storage
 
 
 log = logging.getLogger(__name__)
@@ -819,7 +822,12 @@ class SubmitPhotosView(View):
     End-point for submitting photos for verification.
     """
 
+    @method_decorator(transaction.non_atomic_requests)
+    def dispatch(self, *args, **kwargs):    # pylint: disable=missing-docstring
+        return super(SubmitPhotosView, self).dispatch(*args, **kwargs)
+
     @method_decorator(login_required)
+    @method_decorator(outer_atomic(read_committed=True))
     def post(self, request):
         """
         Submit photos for verification.
@@ -1102,9 +1110,10 @@ class SubmitPhotosView(View):
         Returns: None
 
         """
-        if settings.FEATURES.get('SEGMENT_IO_LMS') and hasattr(settings, 'SEGMENT_IO_LMS_KEY'):
+        if settings.LMS_SEGMENT_KEY:
             tracking_context = tracker.get_tracker().resolve_context()
             context = {
+                'ip': tracking_context.get('ip'),
                 'Google Analytics': {
                     'clientId': tracking_context.get('client_id')
                 }
@@ -1311,8 +1320,9 @@ def results_callback(request):
     checkpoints = VerificationCheckpoint.objects.filter(photo_verification=attempt).all()
     VerificationStatus.add_status_from_checkpoints(checkpoints=checkpoints, user=attempt.user, status=status)
 
-    # If this is re-verification then send the update email
-    if checkpoints:
+    # Trigger ICRV email only if ICRV status emails config is enabled
+    icrv_status_emails = IcrvStatusEmailsConfiguration.current()
+    if icrv_status_emails.enabled and checkpoints:
         user_id = attempt.user.id
         course_key = checkpoints[0].course_id
         related_assessment_location = checkpoints[0].checkpoint_location
@@ -1439,7 +1449,7 @@ class InCourseReverifyView(View):
             event_name, user_id, course_id, checkpoint
         )
 
-        if settings.FEATURES.get('SEGMENT_IO_LMS') and hasattr(settings, 'SEGMENT_IO_LMS_KEY'):
+        if settings.LMS_SEGMENT_KEY:
             tracking_context = tracker.get_tracker().resolve_context()
             analytics.track(
                 user_id,
@@ -1450,6 +1460,7 @@ class InCourseReverifyView(View):
                     'checkpoint': checkpoint
                 },
                 context={
+                    'ip': tracking_context.get('ip'),
                     'Google Analytics': {
                         'clientId': tracking_context.get('client_id')
                     }

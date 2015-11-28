@@ -95,10 +95,10 @@ def _write_styles(selector, output_root, classes):
         for class_ in classes:
             css_imports[class_].add(fragment_name)
 
-    module_styles_lines = []
-    module_styles_lines.append("@import 'bourbon/bourbon';")
-    module_styles_lines.append("@import 'bourbon/addons/button';")
-    module_styles_lines.append("@import 'assets/anims';")
+    module_styles_lines = [
+        "@import 'bourbon/bourbon';",
+        "@import 'base/variables';",
+    ]
     for class_, fragment_names in css_imports.items():
         module_styles_lines.append("""{selector}.xmodule_{class_} {{""".format(
             class_=class_, selector=selector
@@ -186,6 +186,9 @@ def main():
     Generate
     Usage: static_content.py <output_root>
     """
+    from django.conf import settings
+    settings.configure()
+
     args = docopt(main.__doc__)
     root = path(args['<output_root>'])
 

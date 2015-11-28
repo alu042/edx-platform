@@ -5,12 +5,9 @@ Courseware views functions
 import logging
 import urllib
 import json
-import cgi
 
 from datetime import datetime
-from django.utils import translation
 from django.utils.translation import ugettext as _
-from django.utils.translation import ungettext
 
 from django.conf import settings
 from django.core.context_processors import csrf
@@ -18,6 +15,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User, AnonymousUser
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.utils.timezone import UTC
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.http import Http404, HttpResponse, HttpResponseBadRequest
@@ -26,12 +24,12 @@ from certificates import api as certs_api
 from edxmako.shortcuts import render_to_response, render_to_string, marketing_link
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.cache import cache_control
-from django.db import transaction
 from markupsafe import escape
 
 from courseware import grades
-from courseware.access import has_access, in_preview_mode, _adjust_start_date_for_beta_testers
+from courseware.access import has_access, _adjust_start_date_for_beta_testers
 from courseware.access_response import StartDateError
+from courseware.access_utils import in_preview_mode
 from courseware.courses import (
     get_courses, get_course, get_course_by_id,
     get_studio_url, get_course_with_access,
@@ -63,6 +61,7 @@ from student.models import UserTestGroup, CourseEnrollment
 from student.views import is_course_blocked
 from util.cache import cache, cache_if_anonymous
 from util.date_utils import strftime_localized
+from util.db import outer_atomic
 from xblock.fragment import Fragment
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError, NoPathToItem
@@ -78,8 +77,6 @@ from microsite_configuration import microsite
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from opaque_keys.edx.keys import CourseKey, UsageKey
 from instructor.enrollment import uses_shib
-
-from util.db import commit_on_success_with_read_committed
 
 import survey.utils
 import survey.views
@@ -283,41 +280,12 @@ def save_positions_recursively_up(user, request, field_data_cache, xmodule, cour
         current_module = parent
 
 
-def chat_settings(course, user):
-    """
-    Returns a dict containing the settings required to connect to a
-    Jabber chat server and room.
-    """
-    domain = getattr(settings, "JABBER_DOMAIN", None)
-    if domain is None:
-        log.warning('You must set JABBER_DOMAIN in the settings to '
-                    'enable the chat widget')
-        return None
-
-    return {
-        'domain': domain,
-
-        # Jabber doesn't like slashes, so replace with dashes
-        'room': "{ID}_class".format(ID=course.id.replace('/', '-')),
-
-        'username': "{USER}@{DOMAIN}".format(
-            USER=user.username, DOMAIN=domain
-        ),
-
-        # TODO: clearly this needs to be something other than the username
-        #       should also be something that's not necessarily tied to a
-        #       particular course
-        'password': "{USER}@{DOMAIN}".format(
-            USER=user.username, DOMAIN=domain
-        ),
-    }
-
-
+@transaction.non_atomic_requests
 @login_required
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @ensure_valid_course_key
-@commit_on_success_with_read_committed
+@outer_atomic(read_committed=True)
 def index(request, course_id, chapter=None, section=None,
           position=None):
     """
@@ -471,18 +439,6 @@ def _index_bulk_op(request, course_key, chapter, section, position):
             # passing CONTENT_DEPTH avoids returning 404 for a course with an
             # empty first section and a second section with content
             return redirect_to_course_position(course_module, CONTENT_DEPTH)
-
-        # Only show the chat if it's enabled by the course and in the
-        # settings.
-        show_chat = course.show_chat and settings.FEATURES['ENABLE_CHAT']
-        if show_chat:
-            context['chat'] = chat_settings(course, request.user)
-            # If we couldn't load the chat settings, then don't show
-            # the widget in the courseware.
-            if context['chat'] is None:
-                show_chat = False
-
-        context['show_chat'] = show_chat
 
         chapter_descriptor = course.get_child_by(lambda m: m.location.name == chapter)
         if chapter_descriptor is not None:
@@ -923,21 +879,17 @@ def course_about(request, course_id):
         })
 
 
+@transaction.non_atomic_requests
 @login_required
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
-@transaction.commit_manually
 @ensure_valid_course_key
 def progress(request, course_id, student_id=None):
-    """
-    Wraps "_progress" with the manual_transaction context manager just in case
-    there are unanticipated errors.
-    """
+    """ Display the progress page. """
 
     course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
 
     with modulestore().bulk_operations(course_key):
-        with grades.manual_transaction():
-            return _progress(request, course_key, student_id)
+        return _progress(request, course_key, student_id)
 
 
 def _progress(request, course_key, student_id):
@@ -976,8 +928,11 @@ def _progress(request, course_key, student_id):
     # The pre-fetching of groups is done to make auth checks not require an
     # additional DB lookup (this kills the Progress page in particular).
     student = User.objects.prefetch_related("groups").get(id=student.id)
-    field_data_cache = grades.field_data_cache_for_grading(course, student)
-    scores_client = ScoresClient.from_field_data_cache(field_data_cache)
+
+    with outer_atomic():
+        field_data_cache = grades.field_data_cache_for_grading(course, student)
+        scores_client = ScoresClient.from_field_data_cache(field_data_cache)
+
     courseware_summary = grades.progress_summary(
         student, request, course, field_data_cache=field_data_cache, scores_client=scores_client
     )
@@ -1026,7 +981,7 @@ def _progress(request, course_key, student_id):
                     'download_url': None
                 })
 
-    with grades.manual_transaction():
+    with outer_atomic():
         response = render_to_response('courseware/progress.html', context)
 
     return response
@@ -1047,6 +1002,9 @@ def _credit_course_requirements(course_key, student):
     # should NOT be displayed on the progress page.
     if not (settings.FEATURES.get("ENABLE_CREDIT_ELIGIBILITY", False) and is_credit_course(course_key)):
         return None
+
+    # Credit requirement statuses for which user does not remain eligible to get credit.
+    non_eligible_statuses = ['failed', 'declined']
 
     # Retrieve the status of the user for each eligibility requirement in the course.
     # For each requirement, the user's status is either "satisfied", "failed", or None.
@@ -1071,7 +1029,7 @@ def _credit_course_requirements(course_key, student):
 
     # If the user has *failed* any requirements (for example, if a photo verification is denied),
     # then the user is NOT eligible for credit.
-    elif any(requirement['status'] == 'failed' for requirement in requirement_statuses):
+    elif any(requirement['status'] in non_eligible_statuses for requirement in requirement_statuses):
         eligibility_status = "not_eligible"
 
     # Otherwise, the user may be eligible for credit, but the user has not
@@ -1316,6 +1274,8 @@ def is_course_passed(course, grade_summary=None, student=None, request=None):
     return success_cutoff and grade_summary['percent'] >= success_cutoff
 
 
+# Grades can potentially be written - if so, let grading manage the transaction.
+@transaction.non_atomic_requests
 @require_POST
 def generate_user_cert(request, course_id):
     """Start generating a new certificate for the user.
@@ -1386,7 +1346,7 @@ def _track_successful_certificate_generation(user_id, course_id):  # pylint: dis
         None
 
     """
-    if settings.FEATURES.get('SEGMENT_IO_LMS') and hasattr(settings, 'SEGMENT_IO_LMS_KEY'):
+    if settings.LMS_SEGMENT_KEY:
         event_name = 'edx.bi.user.certificate.generate'
         tracking_context = tracker.get_tracker().resolve_context()
 
@@ -1398,6 +1358,7 @@ def _track_successful_certificate_generation(user_id, course_id):  # pylint: dis
                 'label': unicode(course_id)
             },
             context={
+                'ip': tracking_context.get('ip'),
                 'Google Analytics': {
                     'clientId': tracking_context.get('client_id')
                 }
@@ -1414,6 +1375,10 @@ def render_xblock(request, usage_key_string, check_if_enrolled=True):
     usage_key = UsageKey.from_string(usage_key_string)
     usage_key = usage_key.replace(course_key=modulestore().fill_in_run(usage_key.course_key))
     course_key = usage_key.course_key
+
+    requested_view = request.GET.get('view', 'student_view')
+    if requested_view != 'student_view':
+        return HttpResponseBadRequest("Rendering of the xblock view '{}' is not supported.".format(requested_view))
 
     with modulestore().bulk_operations(course_key):
         # verify the user has access to the course, including enrollment check

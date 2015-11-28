@@ -34,6 +34,8 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
     NEXT_WEEK = TODAY + datetime.timedelta(days=7)
     NEXT_MONTH = TODAY + datetime.timedelta(days=30)
 
+    COURSE_OVERVIEW_TABS = {'courseware', 'info', 'textbooks', 'discussion', 'wiki', 'progress'}
+
     def check_course_overview_against_course(self, course):
         """
         Compares a CourseOverview object against its corresponding
@@ -163,6 +165,12 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
         for (course_value, cache_miss_value, cache_hit_value) in others_to_test:
             self.assertEqual(course_value, cache_miss_value)
             self.assertEqual(cache_miss_value, cache_hit_value)
+
+        # test tabs for both cached miss and cached hit courses
+        for course_overview in [course_overview_cache_miss, course_overview_cache_hit]:
+            course_overview_tabs = course_overview.tabs.all()
+            course_resp_tabs = {tab.tab_id for tab in course_overview_tabs}
+            self.assertEqual(self.COURSE_OVERVIEW_TABS, course_resp_tabs)
 
     @ddt.data(*itertools.product(
         [
@@ -359,10 +367,61 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
             with mock.patch(
                 'openedx.core.djangoapps.content.course_overviews.models.CourseOverview._get_pk_val'
             ) as mock_get_pk_val:
-
                 mock_get_pk_val.return_value = None
+                # This method was not present in django 1.4. Django 1.8 calls this method if
+                # _get_pk_val returns None.  This method will return empty str if there is no
+                # default value present. So mock it to avoid returning the empty str as primary key
+                # value. Due to empty str, model.save will do an update instead of insert which is
+                # incorrect and get exception in
+                # common.djangoapps.xmodule_django.models.OpaqueKeyField.get_prep_value
+                with mock.patch('django.db.models.Field.get_pk_value_on_save') as mock_get_pk_value_on_save:
 
-                # verify the CourseOverview is loaded successfully both times,
-                # including after an IntegrityError exception the 2nd time
-                for _ in range(2):
-                    self.assertIsInstance(CourseOverview.get_from_id(course.id), CourseOverview)
+                    mock_get_pk_value_on_save.return_value = None
+
+                    # The CourseOverviewTab entries can't get properly created when the CourseOverview used as a
+                    # foreign key has a None 'id' - the bulk_create raises an IntegrityError. Mock out the
+                    # CourseOverviewTab creation, as those record creations aren't what is being tested in this test.
+                    # This mocking makes the first get_from_id() succeed with no IntegrityError - the 2nd one raises
+                    # an IntegrityError for the reason listed above.
+                    with mock.patch(
+                        'openedx.core.djangoapps.content.course_overviews.models.CourseOverviewTab.objects.bulk_create'
+                    ) as mock_bulk_create:
+                        mock_bulk_create.return_value = None
+
+                        # Verify the CourseOverview is loaded successfully both times,
+                        # including after an IntegrityError exception the 2nd time.
+                        for _ in range(2):
+                            self.assertIsInstance(CourseOverview.get_from_id(course.id), CourseOverview)
+
+    def test_course_overview_version_update(self):
+        """
+        Test that when we are running in a partially deployed state (where both
+        old and new CourseOverview.VERSION values are active), that we behave
+        properly. This assumes that all updates are backwards compatible, or
+        at least are backwards compatible between version N and N-1.
+        """
+        course = CourseFactory.create()
+        with mock.patch('openedx.core.djangoapps.content.course_overviews.models.CourseOverview.VERSION', new=10):
+            # This will create a version 10 CourseOverview
+            overview_v10 = CourseOverview.get_from_id(course.id)
+            self.assertEqual(overview_v10.version, 10)
+
+            # Now we're going to muck with the values and manually save it as v09
+            overview_v10.version = 9
+            overview_v10.save()
+
+            # Now we're going to ask for it again. Because 9 < 10, we expect
+            # that this entry will be deleted() and that we'll get back a new
+            # entry with version = 10 again.
+            updated_overview = CourseOverview.get_from_id(course.id)
+            self.assertEqual(updated_overview.version, 10)
+
+            # Now we're going to muck with this and set it a version higher in
+            # the database.
+            updated_overview.version = 11
+            updated_overview.save()
+
+            # Because CourseOverview is encountering a version *higher* than it
+            # knows how to write, it's not going to overwrite what's there.
+            unmodified_overview = CourseOverview.get_from_id(course.id)
+            self.assertEqual(unmodified_overview.version, 11)

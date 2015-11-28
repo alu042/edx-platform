@@ -220,9 +220,8 @@ class OrderTest(ModuleStoreTestCase):
         self.assertEqual(item.status, status)
 
     @override_settings(
-        SEGMENT_IO_LMS_KEY="foobar",
+        LMS_SEGMENT_KEY="foobar",
         FEATURES={
-            'SEGMENT_IO_LMS': True,
             'STORE_BILLING_INFO': True,
         }
     )
@@ -254,19 +253,19 @@ class OrderTest(ModuleStoreTestCase):
             {
                 'orderId': 1,
                 'currency': 'usd',
-                'total': '40',
+                'total': '40.00',
                 'products': [
                     {
                         'sku': u'CertificateItem.honor',
                         'name': unicode(self.course_key),
                         'category': unicode(self.course_key.org),
-                        'price': '40',
+                        'price': '40.00',
                         'id': 1,
                         'quantity': 1
                     }
                 ]
             },
-            context={'Google Analytics': {'clientId': None}}
+            context={'ip': None, 'Google Analytics': {'clientId': None}}
         )
 
     def test_purchase_item_failure(self):
@@ -849,19 +848,19 @@ class CertificateItemTest(ModuleStoreTestCase):
             {
                 'orderId': 1,
                 'currency': 'usd',
-                'total': '40',
+                'total': '40.00',
                 'products': [
                     {
                         'sku': u'CertificateItem.verified',
                         'name': unicode(self.course_key),
                         'category': unicode(self.course_key.org),
-                        'price': '40',
+                        'price': '40.00',
                         'id': 1,
                         'quantity': 1
                     }
                 ]
             },
-            context={'Google Analytics': {'clientId': None}}
+            context={'ip': None, 'Google Analytics': {'clientId': None}}
         )
 
     def test_existing_enrollment(self):
@@ -884,9 +883,8 @@ class CertificateItemTest(ModuleStoreTestCase):
         self.assertEquals(cert_item.single_item_receipt_template, 'shoppingcart/receipt.html')
 
     @override_settings(
-        SEGMENT_IO_LMS_KEY="foobar",
+        LMS_SEGMENT_KEY="foobar",
         FEATURES={
-            'SEGMENT_IO_LMS': True,
             'STORE_BILLING_INFO': True,
         }
     )
@@ -926,9 +924,8 @@ class CertificateItemTest(ModuleStoreTestCase):
         self.assertEquals(target_certs[0].order.status, 'purchased')
 
     @override_settings(
-        SEGMENT_IO_LMS_KEY="foobar",
+        LMS_SEGMENT_KEY="foobar",
         FEATURES={
-            'SEGMENT_IO_LMS': True,
             'STORE_BILLING_INFO': True,
         }
     )

@@ -40,7 +40,7 @@ requirejs.config({
         "xblock": "xmodule_js/common_static/coffee/src/xblock",
         "utility": "xmodule_js/common_static/js/src/utility",
         "accessibility": "xmodule_js/common_static/js/src/accessibility_tools",
-        "sinon": "xmodule_js/common_static/js/vendor/sinon-1.7.1",
+        "sinon": "xmodule_js/common_static/js/vendor/sinon-1.17.0",
         "squire": "xmodule_js/common_static/js/vendor/Squire",
         "jasmine-jquery": "xmodule_js/common_static/js/vendor/jasmine-jquery",
         "jasmine-imagediff": "xmodule_js/common_static/js/vendor/jasmine-imagediff",
@@ -51,7 +51,7 @@ requirejs.config({
         "URI": "xmodule_js/common_static/js/vendor/URI.min",
         "mock-ajax": "xmodule_js/common_static/js/vendor/mock-ajax",
 
-        "mathjax": "//cdn.mathjax.org/mathjax/2.4-latest/MathJax.js?config=TeX-MML-AM_HTMLorMML-full&delayStartupUntil=configured",
+        "mathjax": "//cdn.mathjax.org/mathjax/2.5-latest/MathJax.js?config=TeX-MML-AM_HTMLorMML-full&delayStartupUntil=configured",
         "youtube": "//www.youtube.com/player_api?noext",
 
         "coffee/src/ajax_prefix": "xmodule_js/common_static/coffee/src/ajax_prefix",

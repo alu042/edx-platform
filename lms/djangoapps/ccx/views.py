@@ -20,6 +20,7 @@ from django.http import (
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.db import transaction
 from django.http import Http404
 from django.shortcuts import redirect
 from django.utils.translation import ugettext as _
@@ -36,27 +37,25 @@ from courseware.module_render import get_module_for_descriptor
 from edxmako.shortcuts import render_to_response
 from opaque_keys.edx.keys import CourseKey
 from ccx_keys.locator import CCXLocator
-from student.roles import CourseCcxCoachRole  # pylint: disable=import-error
+from student.roles import CourseCcxCoachRole
 from student.models import CourseEnrollment
 
-from instructor.offline_gradecalc import student_grades  # pylint: disable=import-error
-from instructor.views.api import _split_input_list  # pylint: disable=import-error
-from instructor.views.tools import get_student_from_identifier  # pylint: disable=import-error
+from instructor.offline_gradecalc import student_grades
+from instructor.views.api import _split_input_list
+from instructor.views.tools import get_student_from_identifier
 from instructor.enrollment import (
     enroll_email,
     unenroll_email,
     get_email_params,
 )
 
-from .models import CustomCourseForEdX
-from .overrides import (
-    clear_override_for_ccx,
+from lms.djangoapps.ccx.models import CustomCourseForEdX
+from lms.djangoapps.ccx.overrides import (
     get_override_for_ccx,
     override_field_for_ccx,
     clear_ccx_field_info_from_ccx_map,
     bulk_delete_ccx_override_fields,
 )
-
 
 log = logging.getLogger(__name__)
 TODAY = datetime.datetime.today  # for patching in tests
@@ -184,7 +183,19 @@ def create_ccx(request, course, ccx=None):
                 override_field_for_ccx(ccx, vertical, hidden, True)
 
     ccx_id = CCXLocator.from_course_locator(course.id, ccx.id)  # pylint: disable=no-member
+
     url = reverse('ccx_coach_dashboard', kwargs={'course_id': ccx_id})
+
+    # Enroll the coach in the course
+    email_params = get_email_params(course, auto_enroll=True, course_key=ccx_id, display_name=ccx.display_name)
+    enroll_email(
+        course_id=ccx_id,
+        student_email=request.user.email,
+        auto_enroll=True,
+        email_students=True,
+        email_params=email_params,
+    )
+
     return redirect(url)
 
 
@@ -254,7 +265,7 @@ def save_ccx(request, course, ccx=None):
     grader = policy['GRADER']
     for section in grader:
         count = graded.get(section.get('type'), 0)
-        if count < section['min_count']:
+        if count < section.get('min_count', 0):
             changed = True
             section['min_count'] = count
     if changed:
@@ -347,8 +358,13 @@ def get_ccx_schedule(course, ccx):
         Recursive generator function which yields CCX schedule nodes.
         We convert dates to string to get them ready for use by the js date
         widgets, which use text inputs.
+        Visits students visible nodes only; nodes children of hidden ones
+        are skipped as well.
         """
         for child in node.get_children():
+            # in case the children are visible to staff only, skip them
+            if child.visible_to_staff_only:
+                continue
             start = get_override_for_ccx(ccx, child, 'start', None)
             if start:
                 start = str(start)[:-9]
@@ -390,7 +406,7 @@ def ccx_schedule(request, course, ccx=None):  # pylint: disable=unused-argument
 
     schedule = get_ccx_schedule(course, ccx)
     json_schedule = json.dumps(schedule, indent=4)
-    return HttpResponse(json_schedule, mimetype='application/json')
+    return HttpResponse(json_schedule, content_type='application/json')
 
 
 @ensure_csrf_cookie
@@ -406,7 +422,7 @@ def ccx_invite(request, course, ccx=None):
     action = request.POST.get('enrollment-button')
     identifiers_raw = request.POST.get('student-ids')
     identifiers = _split_input_list(identifiers_raw)
-    auto_enroll = True if 'auto-enroll' in request.POST else False
+    auto_enroll = True
     email_students = True if 'email-students' in request.POST else False
     for identifier in identifiers:
         user = None
@@ -525,6 +541,8 @@ def prep_course_for_grading(course, request):
     course.set_grading_policy(course.grading_policy)
 
 
+# Grades can potentially be written - if so, let grading manage the transaction.
+@transaction.non_atomic_requests
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @coach_dashboard
 def ccx_gradebook(request, course, ccx=None):
@@ -564,6 +582,8 @@ def ccx_gradebook(request, course, ccx=None):
         })
 
 
+# Grades can potentially be written - if so, let grading manage the transaction.
+@transaction.non_atomic_requests
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @coach_dashboard
 def ccx_grades_csv(request, course, ccx=None):
@@ -611,4 +631,7 @@ def ccx_grades_csv(request, course, ccx=None):
         for row in rows:
             writer.writerow(row)
 
-        return HttpResponse(buf.getvalue(), content_type='text/plain')
+        response = HttpResponse(buf.getvalue(), content_type='text/csv')
+        response['Content-Disposition'] = 'attachment'
+
+        return response

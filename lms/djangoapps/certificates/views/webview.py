@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.template import RequestContext
 from django.utils.translation import ugettext as _
+from django.utils.encoding import smart_str
 from django.core.urlresolvers import reverse
 
 from courseware.courses import course_image_url
@@ -23,6 +24,7 @@ from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
 from student.models import LinkedInAddToProfileConfiguration
 from util import organizations_helpers as organization_api
+from util.views import handle_500
 from xmodule.modulestore.django import modulestore
 
 from certificates.api import (
@@ -90,7 +92,7 @@ def _update_certificate_context(context, course, user, user_certificate):
     user_fullname = user.profile.name
     platform_name = microsite.get_value("platform_name", settings.PLATFORM_NAME)
     certificate_type = context.get('certificate_type')
-    partner_short_name = course.org
+    partner_short_name = course.display_organization if course.display_organization else course.org
     partner_long_name = None
     organizations = organization_api.get_course_organizations(course_id=course.id)
     if organizations:
@@ -111,7 +113,7 @@ def _update_certificate_context(context, course, user, user_certificate):
     course_title_from_cert = context['certificate_data'].get('course_title', '')
     accomplishment_copy_course_name = course_title_from_cert if course_title_from_cert else course.display_name
     context['accomplishment_copy_course_name'] = accomplishment_copy_course_name
-    share_settings = settings.FEATURES.get('SOCIAL_SHARING_SETTINGS', {})
+    share_settings = getattr(settings, 'SOCIAL_SHARING_SETTINGS', {})
     context['facebook_share_enabled'] = share_settings.get('CERTIFICATE_FACEBOOK', False)
     context['facebook_app_id'] = getattr(settings, "FACEBOOK_APP_ID", None)
     context['facebook_share_text'] = share_settings.get(
@@ -129,7 +131,8 @@ def _update_certificate_context(context, course, user, user_certificate):
         )
     )
 
-    context['course_number'] = course.number
+    course_number = course.display_coursenumber if course.display_coursenumber else course.number
+    context['course_number'] = course_number
     try:
         badge = BadgeAssertion.objects.get(user=user, course_id=course.location.course_key)
     except BadgeAssertion.DoesNotExist:
@@ -239,13 +242,13 @@ def _update_certificate_context(context, course, user, user_certificate):
         platform_name=platform_name,
         user_name=user_fullname,
         partner_short_name=partner_short_name,
-        course_number=course.number
+        course_number=course_number
     )
 
     # Translators:  This text is bound to the HTML 'title' element of the page and appears in the browser title bar
     context['document_title'] = _("{partner_short_name} {course_number} Certificate | {platform_name}").format(
         partner_short_name=partner_short_name,
-        course_number=course.number,
+        course_number=course_number,
         platform_name=platform_name
     )
 
@@ -278,6 +281,7 @@ def _update_certificate_context(context, course, user, user_certificate):
     )
 
 
+@handle_500(template_path="certificates/server-error.html")
 def render_html_view(request, user_id, course_id):
     """
     This public view generates an HTML representation of the specified student's certificate
@@ -413,10 +417,12 @@ def render_html_view(request, user_id, course_id):
         )
     )
     context['share_url'] = share_url
-    twitter_url = 'https://twitter.com/intent/tweet?text={twitter_share_text}&url={share_url}'.format(
-        twitter_share_text=context['twitter_share_text'],
-        share_url=urllib.quote_plus(share_url)
-    )
+    twitter_url = ''
+    if context.get('twitter_share_enabled', False):
+        twitter_url = 'https://twitter.com/intent/tweet?text={twitter_share_text}&url={share_url}'.format(
+            twitter_share_text=smart_str(context['twitter_share_text']),
+            share_url=urllib.quote_plus(smart_str(share_url))
+        )
     context['twitter_url'] = twitter_url
     context['full_course_image_url'] = request.build_absolute_uri(course_image_url(course))
 
@@ -424,15 +430,18 @@ def render_html_view(request, user_id, course_id):
     # Clicking this button sends the user to LinkedIn where they
     # can add the certificate information to their profile.
     linkedin_config = LinkedInAddToProfileConfiguration.current()
-    if linkedin_config.enabled:
+
+    # posting certificates to LinkedIn is not currently
+    # supported in microsites/White Labels
+    if linkedin_config.enabled and not microsite.is_request_in_microsite():
         context['linked_in_url'] = linkedin_config.add_to_profile_url(
             course.id,
             course.display_name,
             user_certificate.mode,
-            request.build_absolute_uri(get_certificate_url(
+            smart_str(request.build_absolute_uri(get_certificate_url(
                 user_id=user.id,
                 course_id=unicode(course.id)
-            ))
+            )))
         )
     else:
         context['linked_in_url'] = None
@@ -468,7 +477,13 @@ def render_html_view(request, user_id, course_id):
     if settings.FEATURES.get('CUSTOM_CERTIFICATE_TEMPLATES_ENABLED', False):
         custom_template = get_certificate_template(course_key, user_certificate.mode)
         if custom_template:
-            template = Template(custom_template)
+            template = Template(
+                custom_template,
+                output_encoding='utf-8',
+                input_encoding='utf-8',
+                default_filters=['decode.utf8'],
+                encoding_errors='replace',
+            )
             context = RequestContext(request, context)
             return HttpResponse(template.render(context))
 

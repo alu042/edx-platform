@@ -291,9 +291,6 @@ class CreditRequirement(TimeStampedModel):
     active = models.BooleanField(default=True)
 
     class Meta(object):
-        """
-        Model metadata.
-        """
         unique_together = ('namespace', 'name', 'course')
         ordering = ["order"]
 
@@ -411,6 +408,7 @@ class CreditRequirementStatus(TimeStampedModel):
     REQUIREMENT_STATUS_CHOICES = (
         ("satisfied", "satisfied"),
         ("failed", "failed"),
+        ("declined", "declined"),
     )
 
     username = models.CharField(max_length=255, db_index=True)
@@ -427,7 +425,7 @@ class CreditRequirementStatus(TimeStampedModel):
     # Maintain a history of requirement status updates for auditing purposes
     history = HistoricalRecords()
 
-    class Meta(object):  # pylint: disable=missing-docstring
+    class Meta(object):
         unique_together = ('username', 'requirement')
 
     @classmethod
@@ -445,7 +443,7 @@ class CreditRequirementStatus(TimeStampedModel):
         return cls.objects.filter(requirement__in=requirements, username=username)
 
     @classmethod
-    @transaction.commit_on_success
+    @transaction.atomic
     def add_or_update_requirement_status(cls, username, requirement, status="satisfied", reason=None):
         """
         Add credit requirement status for given username.
@@ -468,7 +466,7 @@ class CreditRequirementStatus(TimeStampedModel):
             requirement_status.save()
 
     @classmethod
-    @transaction.commit_on_success
+    @transaction.atomic
     def remove_requirement_status(cls, username, requirement):
         """
         Remove credit requirement status for given username.
@@ -492,6 +490,13 @@ class CreditRequirementStatus(TimeStampedModel):
             return
 
 
+def default_deadline_for_credit_eligibility():  # pylint: disable=invalid-name
+    """ The default deadline to use when creating a new CreditEligibility model. """
+    return datetime.datetime.now(pytz.UTC) + datetime.timedelta(
+        days=getattr(settings, "CREDIT_ELIGIBILITY_EXPIRATION_DAYS", 365)
+    )
+
+
 class CreditEligibility(TimeStampedModel):
     """
     A record of a user's eligibility for credit from a specific credit
@@ -506,15 +511,11 @@ class CreditEligibility(TimeStampedModel):
     # We save the deadline as a database field just in case
     # we need to override the deadline for particular students.
     deadline = models.DateTimeField(
-        default=lambda: (
-            datetime.datetime.now(pytz.UTC) + datetime.timedelta(
-                days=getattr(settings, "CREDIT_ELIGIBILITY_EXPIRATION_DAYS", 365)
-            )
-        ),
+        default=default_deadline_for_credit_eligibility,
         help_text=ugettext_lazy("Deadline for purchasing and requesting credit.")
     )
 
-    class Meta(object):  # pylint: disable=missing-docstring
+    class Meta(object):
         unique_together = ('username', 'course')
         verbose_name_plural = "Credit eligibilities"
 
@@ -636,7 +637,7 @@ class CreditRequest(TimeStampedModel):
 
     history = HistoricalRecords()
 
-    class Meta(object):  # pylint: disable=missing-docstring
+    class Meta(object):
         # Enforce the constraint that each user can have exactly one outstanding
         # request to a given provider.  Multiple requests use the same UUID.
         unique_together = ('username', 'course', 'provider')

@@ -21,6 +21,7 @@ from ...pages.lms.dashboard import DashboardPage
 from ...pages.lms.problem import ProblemPage
 from ...pages.lms.track_selection import TrackSelectionPage
 from ...pages.lms.pay_and_verify import PaymentAndVerificationFlow, FakePaymentPage
+from common.test.acceptance.tests.helpers import disable_animations
 
 
 class BaseInstructorDashboardTest(EventsTestMixin, UniqueCourseTest):
@@ -117,6 +118,7 @@ class AutoEnrollmentWithCSVTest(BaseInstructorDashboardTest):
         self.assertEqual(self.auto_enroll_section.first_notification_message(section_type=self.auto_enroll_section.NOTIFICATION_ERROR), "Make sure that the file you upload is in CSV format with no extraneous characters or rows.")
 
 
+@attr('shard_1')
 class ProctoredExamsTest(BaseInstructorDashboardTest):
     """
     End-to-end tests for Proctoring Sections of the Instructor Dashboard.
@@ -169,12 +171,32 @@ class ProctoredExamsTest(BaseInstructorDashboardTest):
         # Auto-auth register for the course.
         self._auto_auth(self.USERNAME, self.EMAIL, False)
 
-    def _auto_auth(self, username, email, staff, enrollment_mode="honor"):
+    def _auto_auth(self, username, email, staff):
         """
         Logout and login with given credentials.
         """
         AutoAuthPage(self.browser, username=username, email=email,
-                     course_id=self.course_id, staff=staff, enrollment_mode=enrollment_mode).visit()
+                     course_id=self.course_id, staff=staff).visit()
+
+    def _login_as_a_verified_user(self):
+        """
+        login as a verififed user
+        """
+
+        self._auto_auth(self.USERNAME, self.EMAIL, False)
+
+        # the track selection page cannot be visited. see the other tests to see if any prereq is there.
+        # Navigate to the track selection page
+        self.track_selection_page.visit()
+
+        # Enter the payment and verification flow by choosing to enroll as verified
+        self.track_selection_page.enroll('verified')
+
+        # Proceed to the fake payment page
+        self.payment_and_verification_flow.proceed_to_payment()
+
+        # Submit payment
+        self.fake_payment_page.submit_payment()
 
     def _create_a_proctored_exam_and_attempt(self):
         """
@@ -186,14 +208,13 @@ class ProctoredExamsTest(BaseInstructorDashboardTest):
         self._auto_auth("STAFF_TESTER", "staff101@example.com", True)
         self.course_outline.visit()
 
-        #open the exam settings to make it a proctored exam.
+        # open the exam settings to make it a proctored exam.
         self.course_outline.open_exam_settings_dialog()
         self.course_outline.make_exam_proctored()
-        time.sleep(2)  # Wait for 2 seconds to save the settings.
 
         # login as a verified student and visit the courseware.
         LogoutPage(self.browser).visit()
-        self._auto_auth(self.USERNAME, self.EMAIL, False, enrollment_mode="verified")
+        self._login_as_a_verified_user()
         self.courseware_page.visit()
 
         # Start the proctored exam.
@@ -212,16 +233,19 @@ class ProctoredExamsTest(BaseInstructorDashboardTest):
         # open the exam settings to make it a proctored exam.
         self.course_outline.open_exam_settings_dialog()
         self.course_outline.make_exam_timed()
-        time.sleep(2)  # Wait for 2 seconds to save the settings.
 
         # login as a verified student and visit the courseware.
         LogoutPage(self.browser).visit()
-        self._auto_auth(self.USERNAME, self.EMAIL, False, enrollment_mode="verified")
+        self._login_as_a_verified_user()
         self.courseware_page.visit()
 
-        # Start the proctored exam.
+        # Start the timed exam.
         self.courseware_page.start_timed_exam()
 
+        # Stop the timed exam.
+        self.courseware_page.stop_timed_exam()
+
+    @flaky  # TODO fix this SOL-1182
     def test_can_add_remove_allowance(self):
         """
         Make sure that allowances can be added and removed.
@@ -230,29 +254,29 @@ class ProctoredExamsTest(BaseInstructorDashboardTest):
         self._create_a_timed_exam_and_attempt()
 
         # When I log in as an instructor,
-        self.log_in_as_instructor()
+        __, __ = self.log_in_as_instructor()
 
-        # And visit the Allowance Section of Instructor Dashboard's Proctoring tab
+        # And visit the Allowance Section of Instructor Dashboard's Special Exams tab
         instructor_dashboard_page = self.visit_instructor_dashboard()
-        allowance_section = instructor_dashboard_page.select_proctoring().select_allowance_section()
+        allowance_section = instructor_dashboard_page.select_special_exams().select_allowance_section()
 
         # Then I can add Allowance to that exam for a student
         self.assertTrue(allowance_section.is_add_allowance_button_visible)
 
+    @flaky  # TODO fix this SOL-1182
     def test_can_reset_attempts(self):
         """
         Make sure that Exam attempts are visible and can be reset.
         """
-
         # Given that an exam has been configured to be a proctored exam.
         self._create_a_timed_exam_and_attempt()
 
         # When I log in as an instructor,
-        self.log_in_as_instructor()
+        __, __ = self.log_in_as_instructor()
 
-        # And visit the Student Proctored Exam Attempts Section of Instructor Dashboard's Proctoring tab
+        # And visit the Student Proctored Exam Attempts Section of Instructor Dashboard's Special Exams tab
         instructor_dashboard_page = self.visit_instructor_dashboard()
-        exam_attempts_section = instructor_dashboard_page.select_proctoring().select_exam_attempts_section()
+        exam_attempts_section = instructor_dashboard_page.select_special_exams().select_exam_attempts_section()
 
         # Then I can see the search text field
         self.assertTrue(exam_attempts_section.is_search_text_field_visible)
@@ -566,9 +590,10 @@ class CertificatesTest(BaseInstructorDashboardTest):
     def setUp(self):
         super(CertificatesTest, self).setUp()
         self.course_fixture = CourseFixture(**self.course_info).install()
-        self.log_in_as_instructor()
-        instructor_dashboard_page = self.visit_instructor_dashboard()
-        self.certificates_section = instructor_dashboard_page.select_certificates()
+        self.user_name, self.user_id = self.log_in_as_instructor()
+        self.instructor_dashboard_page = self.visit_instructor_dashboard()
+        self.certificates_section = self.instructor_dashboard_page.select_certificates()
+        disable_animations(self.certificates_section)
 
     def test_generate_certificates_buttons_is_visible(self):
         """
@@ -599,3 +624,112 @@ class CertificatesTest(BaseInstructorDashboardTest):
             Then I see 'Pending Instructor Tasks' section
         """
         self.assertTrue(self.certificates_section.pending_tasks_section.visible)
+
+    def test_certificate_exceptions_section_is_visible(self):
+        """
+        Scenario: On the Certificates tab of the Instructor Dashboard, Certificate Exceptions section is visible.
+            Given that I am on the Certificates tab on the Instructor Dashboard
+            Then I see 'CERTIFICATE EXCEPTIONS' section
+        """
+        self.assertTrue(self.certificates_section.certificate_exceptions_section.visible)
+
+    def test_instructor_can_add_certificate_exception(self):
+        """
+        Scenario: On the Certificates tab of the Instructor Dashboard, Instructor can added new certificate
+        exception to list
+
+            Given that I am on the Certificates tab on the Instructor Dashboard
+            When I fill in student username and click 'Add Exception' button
+            Then new certificate exception should be visible in certificate exceptions list
+        """
+        # Add a student to Certificate exception list
+        self.certificates_section.add_certificate_exception(self.user_name, '')
+        self.assertIn(self.user_name, self.certificates_section.last_certificate_exception.text)
+
+    def test_error_on_duplicate_certificate_exception(self):
+        """
+        Scenario: On the Certificates tab of the Instructor Dashboard,
+        Error message appears if student being added already exists in certificate exceptions list
+
+            Given that I am on the Certificates tab on the Instructor Dashboard
+            When I fill in student username that already is in the list and click 'Add Exception' button
+            Then Error Message should say 'username/email already in exception list'
+        """
+        # Add a student to Certificate exception list
+        self.certificates_section.add_certificate_exception(self.user_name, '')
+
+        # Add duplicate student to Certificate exception list
+        self.certificates_section.add_certificate_exception(self.user_name, '')
+
+        self.assertIn(
+            'username/email already in exception list',
+            self.certificates_section.message.text
+        )
+
+    def test_error_on_empty_user_name(self):
+        """
+        Scenario: On the Certificates tab of the Instructor Dashboard,
+        Error message appears if no username/email is entered while clicking "Add Exception" button
+
+            Given that I am on the Certificates tab on the Instructor Dashboard
+            When I click on 'Add Exception' button
+            AND student username/email field is empty
+            Then Error Message should say 'Student username/email is required.'
+        """
+        # Click 'Add Exception' button without filling username/email field
+        self.certificates_section.wait_for_certificate_exceptions_section()
+        self.certificates_section.click_add_exception_button()
+
+        self.assertIn(
+            'Student username/email is required.',
+            self.certificates_section.message.text
+        )
+
+    def test_generate_certificate_exception(self):
+        """
+        Scenario: On the Certificates tab of the Instructor Dashboard, when user clicks
+        'Generate Exception Certificates' newly added certificate exceptions should be synced on server
+
+            Given that I am on the Certificates tab on the Instructor Dashboard
+            When I click 'Generate Exception Certificates'
+            Then newly added certificate exceptions should be synced on server
+        """
+        # Add a student to Certificate exception list
+        self.certificates_section.add_certificate_exception(self.user_name, '')
+
+        # Click 'Generate Exception Certificates' button
+        self.certificates_section.click_generate_certificate_exceptions_button()
+        self.certificates_section.wait_for_ajax()
+
+        # Revisit Page
+        self.certificates_section.refresh()
+
+        # wait for the certificate exception section to render
+        self.certificates_section.wait_for_certificate_exceptions_section()
+
+        # validate certificate exception synced with server is visible in certificate exceptions list
+        self.assertIn(self.user_name, self.certificates_section.last_certificate_exception.text)
+
+    def test_invalid_user_on_generate_certificate_exception(self):
+        """
+        Scenario: On the Certificates tab of the Instructor Dashboard, when user clicks
+        'Generate Exception Certificates' error message should appear if user does not exist
+
+            Given that I am on the Certificates tab on the Instructor Dashboard
+            When I click 'Generate Exception Certificates'
+            AND the user specified by instructor does not exist
+            Then an error message "Student (username/email=test_user) does not exist" is displayed
+        """
+        invalid_user = 'test_user_non_existent'
+        # Add a student to Certificate exception list
+        self.certificates_section.add_certificate_exception(invalid_user, '')
+
+        # Click 'Generate Exception Certificates' button
+        self.certificates_section.click_generate_certificate_exceptions_button()
+        self.certificates_section.wait_for_ajax()
+
+        # validate certificate exception synced with server is visible in certificate exceptions list
+        self.assertIn(
+            'Student (username/email={}) does not exist'.format(invalid_user),
+            self.certificates_section.message.text
+        )

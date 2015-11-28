@@ -62,7 +62,7 @@ DEBUG = True
 # Note: optimized files for testing are generated with settings from test_static_optimized
 STATIC_URL = "/static/"
 STATICFILES_FINDERS = (
-    'staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.FileSystemFinder',
 )
 STATICFILES_DIRS = (
     (TEST_ROOT / "staticfiles" / "cms").abspath(),
@@ -104,7 +104,7 @@ FEATURES['PARTNER_SUPPORT_EMAIL'] = 'partner-support@example.com'
 ########################### Entrance Exams #################################
 FEATURES['ENTRANCE_EXAMS'] = True
 
-FEATURES['ENABLE_PROCTORED_EXAMS'] = True
+FEATURES['ENABLE_SPECIAL_EXAMS'] = True
 
 # Point the URL used to test YouTube availability to our stub YouTube server
 YOUTUBE_PORT = 9080
