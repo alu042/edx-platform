@@ -27,8 +27,9 @@ from xblock.core import XBlock
 from xblock.fragment import Fragment
 
 from capa.tests.response_xml_factory import OptionResponseXMLFactory
+from course_modes.models import CourseMode
 from courseware import module_render as render
-from courseware.courses import get_course_with_access, course_image_url, get_course_info_section
+from courseware.courses import get_course_with_access, get_course_info_section
 from courseware.field_overrides import OverrideFieldData
 from courseware.model_data import FieldDataCache
 from courseware.module_render import hash_resource, get_module_for_descriptor
@@ -38,6 +39,7 @@ from courseware.tests.tests import LoginEnrollmentTestCase
 from courseware.tests.test_submitting_problems import TestSubmittingProblems
 from lms.djangoapps.lms_xblock.runtime import quote_slashes
 from lms.djangoapps.lms_xblock.field_data import LmsFieldData
+from openedx.core.lib.courses import course_image_url
 from student.models import anonymous_id_for_user
 from xmodule.modulestore.tests.django_utils import (
     TEST_DATA_MIXED_TOY_MODULESTORE,
@@ -724,9 +726,9 @@ class TestProctoringRendering(ModuleStoreTestCase):
             )
 
     @ddt.data(
-        ('honor', False, None, None),
+        (CourseMode.DEFAULT_MODE_SLUG, False, None, None),
         (
-            'honor',
+            CourseMode.DEFAULT_MODE_SLUG,
             True,
             'eligible',
             {
@@ -737,7 +739,7 @@ class TestProctoringRendering(ModuleStoreTestCase):
             }
         ),
         (
-            'honor',
+            CourseMode.DEFAULT_MODE_SLUG,
             True,
             'submitted',
             {
@@ -748,7 +750,7 @@ class TestProctoringRendering(ModuleStoreTestCase):
             }
         ),
         (
-            'honor',
+            CourseMode.DEFAULT_MODE_SLUG,
             True,
             'error',
             {
@@ -759,7 +761,7 @@ class TestProctoringRendering(ModuleStoreTestCase):
             }
         ),
         (
-            'verified',
+            CourseMode.VERIFIED,
             False,
             None,
             {
@@ -770,7 +772,7 @@ class TestProctoringRendering(ModuleStoreTestCase):
             }
         ),
         (
-            'verified',
+            CourseMode.VERIFIED,
             False,
             'declined',
             {
@@ -781,7 +783,7 @@ class TestProctoringRendering(ModuleStoreTestCase):
             }
         ),
         (
-            'verified',
+            CourseMode.VERIFIED,
             False,
             'submitted',
             {
@@ -792,7 +794,7 @@ class TestProctoringRendering(ModuleStoreTestCase):
             }
         ),
         (
-            'verified',
+            CourseMode.VERIFIED,
             False,
             'verified',
             {
@@ -803,7 +805,7 @@ class TestProctoringRendering(ModuleStoreTestCase):
             }
         ),
         (
-            'verified',
+            CourseMode.VERIFIED,
             False,
             'rejected',
             {
@@ -814,7 +816,7 @@ class TestProctoringRendering(ModuleStoreTestCase):
             }
         ),
         (
-            'verified',
+            CourseMode.VERIFIED,
             False,
             'error',
             {
@@ -851,56 +853,56 @@ class TestProctoringRendering(ModuleStoreTestCase):
 
     @ddt.data(
         (
-            'honor',
+            CourseMode.DEFAULT_MODE_SLUG,
             True,
             None,
             'Try a proctored exam',
             True
         ),
         (
-            'honor',
+            CourseMode.DEFAULT_MODE_SLUG,
             True,
             'submitted',
             'You have submitted this practice proctored exam',
             False
         ),
         (
-            'honor',
+            CourseMode.DEFAULT_MODE_SLUG,
             True,
             'error',
             'There was a problem with your practice proctoring session',
             True
         ),
         (
-            'verified',
+            CourseMode.VERIFIED,
             False,
             None,
             'This exam is proctored',
             False
         ),
         (
-            'verified',
+            CourseMode.VERIFIED,
             False,
             'submitted',
             'You have submitted this proctored exam for review',
             True
         ),
         (
-            'verified',
+            CourseMode.VERIFIED,
             False,
             'verified',
             'Your proctoring session was reviewed and passed all requirements',
             False
         ),
         (
-            'verified',
+            CourseMode.VERIFIED,
             False,
             'rejected',
             'Your proctoring session was reviewed and did not pass requirements',
             True
         ),
         (
-            'verified',
+            CourseMode.VERIFIED,
             False,
             'error',
             'There was a problem with your proctoring session',
@@ -1764,17 +1766,6 @@ class TestRebindModule(TestSubmittingProblems):
         self.assertEqual(module.system.anonymous_student_id, anonymous_id_for_user(user2, self.course.id))
         self.assertEqual(module.scope_ids.user_id, user2.id)
         self.assertEqual(module.descriptor.scope_ids.user_id, user2.id)
-
-    @patch('courseware.module_render.make_psychometrics_data_update_handler')
-    @patch.dict(settings.FEATURES, {'ENABLE_PSYCHOMETRICS': True})
-    def test_psychometrics_anonymous(self, psycho_handler):
-        """
-        Make sure that noauth modules with anonymous users don't have
-        the psychometrics callback bound.
-        """
-        module = self.get_module_for_user(self.anon_user)
-        module.system.rebind_noauth_module_to_user(module, self.anon_user)
-        self.assertFalse(psycho_handler.called)
 
 
 @attr('shard_1')

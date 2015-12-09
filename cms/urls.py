@@ -1,8 +1,11 @@
 from django.conf import settings
 from django.conf.urls import patterns, include, url
-
 # There is a course creators admin table.
 from ratelimitbackend import admin
+
+from cms.djangoapps.contentstore.views.program import ProgramAuthoringView, ProgramsIdTokenView
+
+
 admin.autodiscover()
 
 # Pattern to match a course key or a library key
@@ -181,6 +184,14 @@ if settings.FEATURES.get('CERTIFICATES_HTML_VIEW'):
             'contentstore.views.certificates.certificates_list_handler')
     )
 
+urlpatterns += (
+    # These views use a configuration model to determine whether or not to
+    # display the Programs authoring app. If disabled, a 404 is returned.
+    url(r'^programs/id_token/$', ProgramsIdTokenView.as_view(), name='programs_id_token'),
+    # Drops into the Programs authoring app, which handles its own routing.
+    url(r'^program/', ProgramAuthoringView.as_view(), name='programs'),
+)
+
 if settings.DEBUG:
     try:
         from .urls_dev import urlpatterns as dev_urlpatterns
@@ -201,6 +212,6 @@ handler500 = 'contentstore.views.render_500'
 
 # display error page templates, for testing purposes
 urlpatterns += (
-    url(r'404', handler404),
-    url(r'500', handler500),
+    url(r'^404$', handler404),
+    url(r'^500$', handler500),
 )

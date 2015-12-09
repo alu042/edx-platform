@@ -29,8 +29,6 @@ urlpatterns = (
     url(r'^login_ajax$', 'student.views.login_user', name="login"),
     url(r'^login_ajax/(?P<error>[^/]*)$', 'student.views.login_user'),
 
-    url(r'^admin_dashboard$', 'dashboard.views.dashboard'),
-
     url(r'^email_confirm/(?P<key>[^/]*)$', 'student.views.confirm_email_change'),
     url(r'^event$', 'track.views.user_track'),
     url(r'^performance$', 'performance.views.performance_log'),
@@ -311,14 +309,6 @@ if settings.COURSEWARE_ENABLED:
             'openedx.core.djangoapps.common_views.xblock.xblock_resource',
             name='xblock_resource_url',
         ),
-
-        # Software Licenses
-
-        # TODO: for now, this is the endpoint of an ajax replay
-        # service that retrieve and assigns license numbers for
-        # software assigned to a course. The numbers have to be loaded
-        # into the database.
-        url(r'^software-licenses$', 'licenses.views.user_software_license', name="user_software_license"),
 
         url(
             r'^courses/{}/xqueue/(?P<userid>[^/]*)/(?P<mod_id>.*?)/(?P<dispatch>[^/]*)$'.format(
@@ -653,12 +643,6 @@ if settings.FEATURES.get('RUN_AS_ANALYTICS_SERVER_ENABLED'):
         url(r'^edinsights_service/', include('edinsights.core.urls')),
     )
 
-# FoldIt views
-urlpatterns += (
-    # The path is hardcoded into their app...
-    url(r'^comm/foldit_ops', 'foldit.views.foldit_ops', name="foldit_ops"),
-)
-
 if settings.FEATURES.get('ENABLE_DEBUG_RUN_PYTHON'):
     urlpatterns += (
         url(r'^debug/run_python$', 'debug.views.run_python'),
@@ -774,3 +758,22 @@ urlpatterns += (
 urlpatterns += (
     url(r'^api/', include('edx_proctoring.urls')),
 )
+
+if settings.FEATURES.get('ENABLE_FINANCIAL_ASSISTANCE_FORM'):
+    urlpatterns += (
+        url(
+            r'^financial-assistance/$',
+            'courseware.views.financial_assistance',
+            name='financial_assistance'
+        ),
+        url(
+            r'^financial-assistance/apply/$',
+            'courseware.views.financial_assistance_form',
+            name='financial_assistance_form'
+        ),
+        url(
+            r'^financial-assistance/submit/$',
+            'courseware.views.financial_assistance_request',
+            name='submit_financial_assistance_request'
+        )
+    )

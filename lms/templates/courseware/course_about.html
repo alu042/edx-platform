@@ -3,25 +3,14 @@
 from microsite_configuration import microsite
 from django.utils.translation import ugettext as _
 from django.core.urlresolvers import reverse
-from courseware.courses import course_image_url, get_course_about_section
+from courseware.courses import get_course_about_section
 from django.conf import settings
 from edxmako.shortcuts import marketing_link
+from openedx.core.lib.courses import course_image_url
 %>
 
 <%inherit file="../main.html" />
 <%block name="headextra">
-
-  <%
-    if self.theme_enabled():
-      google_analytics_file = u'../{ga}'.format(
-        ga=microsite.get_value('google_analytics_file', 'theme-google-analytics.html')
-      )
-    else:
-      google_analytics_file = '../google_analytics.html'
-  %>
-
-  <%include file="${google_analytics_file}" />
-
   ## OG (Open Graph) title and description added below to give social media info to display
   ## (https://developers.facebook.com/docs/opengraph/howtos/maximizing-distribution-media-content#tags)
   <meta property="og:title" content="${get_course_about_section(request, course, 'title')}" />

@@ -21,7 +21,7 @@ from django.contrib.auth.views import password_reset_confirm
 from django.contrib import messages
 from django.core.context_processors import csrf
 from django.core import mail
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, NoReverseMatch
 from django.core.validators import validate_email, ValidationError
 from django.db import IntegrityError, transaction
 from django.http import (HttpResponse, HttpResponseBadRequest, HttpResponseForbidden,
@@ -295,6 +295,7 @@ def _cert_info(user, course_overview, cert_status, course_mode):  # pylint: disa
         CertificateStatuses.downloadable: 'ready',
         CertificateStatuses.notpassing: 'notpassing',
         CertificateStatuses.restricted: 'restricted',
+        CertificateStatuses.auditing: 'auditing',
     }
 
     default_status = 'processing'
@@ -309,7 +310,7 @@ def _cert_info(user, course_overview, cert_status, course_mode):  # pylint: disa
     if cert_status is None:
         return default_info
 
-    is_hidden_status = cert_status['status'] in ('unavailable', 'processing', 'generating', 'notpassing')
+    is_hidden_status = cert_status['status'] in ('unavailable', 'processing', 'generating', 'notpassing', 'auditing')
 
     if course_overview.certificates_display_behavior == 'early_no_info' and is_hidden_status:
         return {}
@@ -325,7 +326,7 @@ def _cert_info(user, course_overview, cert_status, course_mode):  # pylint: disa
         'can_unenroll': status not in DISABLE_UNENROLL_CERT_STATES,
     }
 
-    if (status in ('generating', 'ready', 'notpassing', 'restricted') and
+    if (status in ('generating', 'ready', 'notpassing', 'restricted', 'auditing') and
             course_overview.end_of_course_survey_url is not None):
         status_dict.update({
             'show_survey_button': True,
@@ -337,13 +338,9 @@ def _cert_info(user, course_overview, cert_status, course_mode):  # pylint: disa
         # showing the certificate web view button if certificate is ready state and feature flags are enabled.
         if has_html_certificates_enabled(course_overview.id, course_overview):
             if course_overview.has_any_active_web_certificate:
-                certificate_url = get_certificate_url(
-                    user_id=user.id,
-                    course_id=unicode(course_overview.id),
-                )
                 status_dict.update({
                     'show_cert_web_view': True,
-                    'cert_web_view_url': u'{url}'.format(url=certificate_url)
+                    'cert_web_view_url': get_certificate_url(uuid=cert_status['uuid'])
                 })
             else:
                 # don't show download certificate button if we don't have an active certificate for course
@@ -373,7 +370,7 @@ def _cert_info(user, course_overview, cert_status, course_mode):  # pylint: disa
                     cert_status['download_url']
                 )
 
-    if status in ('generating', 'ready', 'notpassing', 'restricted'):
+    if status in ('generating', 'ready', 'notpassing', 'restricted', 'auditing'):
         if 'grade' not in cert_status:
             # Note: as of 11/20/2012, we know there are students in this state-- cs169.1x,
             # who need to be regraded (we weren't tracking 'notpassing' at first).
@@ -1008,14 +1005,16 @@ def change_enrollment(request, check_access=True):
         # Check that auto enrollment is allowed for this course
         # (= the course is NOT behind a paywall)
         if CourseMode.can_auto_enroll(course_id):
-            # Enroll the user using the default mode (honor)
+            # Enroll the user using the default mode (audit)
             # We're assuming that users of the course enrollment table
             # will NOT try to look up the course enrollment model
             # by its slug.  If they do, it's possible (based on the state of the database)
             # for no such model to exist, even though we've set the enrollment type
-            # to "honor".
+            # to "audit".
             try:
-                CourseEnrollment.enroll(user, course_id, check_access=check_access)
+                enroll_mode = CourseMode.auto_enroll_mode(course_id, available_modes)
+                if enroll_mode:
+                    CourseEnrollment.enroll(user, course_id, check_access=check_access, mode=enroll_mode)
             except Exception:
                 return HttpResponseBadRequest(_("Could not enroll"))
 
@@ -1799,6 +1798,7 @@ def auto_auth(request):
     * `course_id`: Enroll the student in the course with `course_id`
     * `roles`: Comma-separated list of roles to grant the student in the course with `course_id`
     * `no_login`: Define this to create the user but not login
+    * `redirect`: Set to "true" will redirect to course if course_id is defined, otherwise it will redirect to dashboard
 
     If username, email, or password are not provided, use
     randomly generated credentials.
@@ -1823,6 +1823,7 @@ def auto_auth(request):
     if course_id:
         course_key = CourseLocator.from_string(course_id)
     role_names = [v.strip() for v in request.GET.get('roles', '').split(',') if v.strip()]
+    redirect_when_done = request.GET.get('redirect', '').lower() == 'true'
     login_when_done = 'no_login' not in request.GET
 
     form = AccountCreationForm(
@@ -1885,8 +1886,32 @@ def auto_auth(request):
     create_comments_service_user(user)
 
     # Provide the user with a valid CSRF token
-    # then return a 200 response
-    if request.META.get('HTTP_ACCEPT') == 'application/json':
+    # then return a 200 response unless redirect is true
+    if redirect_when_done:
+        # Redirect to course info page if course_id is known
+        if course_id:
+            try:
+                # redirect to course info page in LMS
+                redirect_url = reverse(
+                    'info',
+                    kwargs={'course_id': course_id}
+                )
+            except NoReverseMatch:
+                # redirect to course outline page in Studio
+                redirect_url = reverse(
+                    'course_handler',
+                    kwargs={'course_key_string': course_id}
+                )
+        else:
+            try:
+                # redirect to dashboard for LMS
+                redirect_url = reverse('dashboard')
+            except NoReverseMatch:
+                # redirect to home for Studio
+                redirect_url = reverse('home')
+
+        return redirect(redirect_url)
+    elif request.META.get('HTTP_ACCEPT') == 'application/json':
         response = JsonResponse({
             'created_status': u"Logged in" if login_when_done else "Created",
             'username': username,

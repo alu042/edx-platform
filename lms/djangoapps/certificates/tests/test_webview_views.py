@@ -33,6 +33,7 @@ from certificates.tests.factories import (
     CertificateHtmlViewConfigurationFactory,
     LinkedInAddToProfileConfigurationFactory,
     BadgeAssertionFactory,
+    GeneratedCertificateFactory,
 )
 from util import organizations_helpers as organizations_api
 from django.test.client import RequestFactory
@@ -80,16 +81,15 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         self.client.login(username=self.user.username, password='foo')
         self.request = RequestFactory().request()
 
-        self.cert = GeneratedCertificate.objects.create(
+        self.cert = GeneratedCertificateFactory.create(
             user=self.user,
             course_id=self.course_id,
-            verify_uuid=uuid4(),
             download_uuid=uuid4(),
             download_url="http://www.example.com/certificates/download",
             grade="0.95",
             key='the_key',
             distinction=True,
-            status='generated',
+            status='downloadable',
             mode='honor',
             name=self.user.profile.name,
         )
@@ -164,11 +164,9 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         Test: LinkedIn share URL.
         """
         self._add_course_certificates(count=1, signatory_count=1, is_active=True)
-        test_url = get_certificate_url(
-            user_id=self.user.id,
-            course_id=unicode(self.course.id)
-        )
+        test_url = get_certificate_url(uuid=self.cert.verify_uuid)
         response = self.client.get(test_url)
+        self.assertEqual(response.status_code, 200)
         self.assertIn(urllib.quote_plus(self.request.build_absolute_uri(test_url)), response.content)
 
     @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
@@ -178,12 +176,9 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         Test: LinkedIn share URL should not be visible when called from within a microsite (for now)
         """
         self._add_course_certificates(count=1, signatory_count=1, is_active=True)
-        test_url = get_certificate_url(
-            user_id=self.user.id,
-            course_id=unicode(self.course.id)
-        )
+        test_url = get_certificate_url(uuid=self.cert.verify_uuid)
         response = self.client.get(test_url)
-
+        self.assertEqual(response.status_code, 200)
         # the URL should not be present
         self.assertNotIn(urllib.quote_plus(self.request.build_absolute_uri(test_url)), response.content)
 
@@ -340,6 +335,52 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         self.cert.save()
         response = self.client.get(test_url)
         self.assertIn(str(self.cert.verify_uuid), response.content)
+
+    @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
+    def test_render_certificate_only_for_downloadable_status(self):
+        """
+        Tests taht Certificate HTML Web View returns Certificate only if certificate status is 'downloadable',
+        for other statuses it should return "Invalid Certificate".
+        """
+        test_url = get_certificate_url(
+            user_id=self.user.id,
+            course_id=unicode(self.course.id)
+        )
+        self._add_course_certificates(count=1, signatory_count=2)
+
+        # Validate certificate
+        response = self.client.get(test_url)
+        self.assertIn(str(self.cert.verify_uuid), response.content)
+
+        # Change status to 'generating' and validate that Certificate Web View returns "Invalid Certificate"
+        self.cert.status = CertificateStatuses.generating
+        self.cert.save()
+        response = self.client.get(test_url)
+        self.assertIn("Invalid Certificate", response.content)
+        self.assertIn("Cannot Find Certificate", response.content)
+        self.assertIn("We cannot find a certificate with this URL or ID number.", response.content)
+
+    @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
+    def test_html_view_for_invalid_certificate(self):
+        """
+        Tests that Certificate HTML Web View returns "Cannot Find Certificate" if certificate has been invalidated.
+        """
+        test_url = get_certificate_url(
+            user_id=self.user.id,
+            course_id=unicode(self.course.id)
+        )
+        self._add_course_certificates(count=1, signatory_count=2)
+
+        # Validate certificate
+        response = self.client.get(test_url)
+        self.assertIn(str(self.cert.verify_uuid), response.content)
+
+        # invalidate certificate and verify that "Cannot Find Certificate" is returned
+        self.cert.invalidate()
+        response = self.client.get(test_url)
+        self.assertIn("Invalid Certificate", response.content)
+        self.assertIn("Cannot Find Certificate", response.content)
+        self.assertIn("We cannot find a certificate with this URL or ID number.", response.content)
 
     @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
     def test_render_html_view_with_valid_signatories(self):

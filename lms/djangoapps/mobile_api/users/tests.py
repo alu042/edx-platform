@@ -1,6 +1,7 @@
 """
 Tests for users API
 """
+# pylint: disable=no-member
 import datetime
 import ddt
 from mock import patch
@@ -11,6 +12,7 @@ from django.utils import timezone
 from django.template import defaultfilters
 from django.test import RequestFactory
 
+from certificates.api import generate_user_certificates
 from certificates.models import CertificateStatuses
 from certificates.tests.factories import GeneratedCertificateFactory
 from courseware.access_response import (
@@ -18,6 +20,8 @@ from courseware.access_response import (
     StartDateError,
     VisibilityError,
 )
+from course_modes.models import CourseMode
+from openedx.core.lib.courses import course_image_url
 from student.models import CourseEnrollment
 from util.milestones_helpers import (
     set_prerequisite_courses,
@@ -92,8 +96,13 @@ class TestUserEnrollmentApi(UrlResetMixin, MobileAPITestCase, MobileAuthUserTest
         self.assertIn('course_info/{}/handouts'.format(self.course.id), found_course['course_handouts'])
         self.assertIn('video_outlines/courses/{}'.format(self.course.id), found_course['video_outline'])
         self.assertEqual(found_course['id'], unicode(self.course.id))
-        self.assertEqual(courses[0]['mode'], 'honor')
+        self.assertEqual(courses[0]['mode'], CourseMode.DEFAULT_MODE_SLUG)
         self.assertEqual(courses[0]['course']['subscription_id'], self.course.clean_id(padding_char='_'))
+
+        expected_course_image_url = course_image_url(self.course)
+        self.assertIsNotNone(expected_course_image_url)
+        self.assertIn(expected_course_image_url, found_course['course_image'])
+        self.assertIn(expected_course_image_url, found_course['media']['course_image']['uri'])
 
     def verify_failure(self, response, error_type=None):
         self.assertEqual(response.status_code, 200)
@@ -184,7 +193,11 @@ class TestUserEnrollmentApi(UrlResetMixin, MobileAPITestCase, MobileAuthUserTest
         certificate_data = response.data[0]['certificate']
         self.assertDictEqual(certificate_data, {})
 
-    def test_certificate(self):
+    def verify_pdf_certificate(self):
+        """
+        Verifies the correct URL is returned in the response
+        for PDF certificates.
+        """
         self.login_and_enroll()
 
         certificate_url = "http://test_certificate_url"
@@ -199,6 +212,46 @@ class TestUserEnrollmentApi(UrlResetMixin, MobileAPITestCase, MobileAuthUserTest
         response = self.api_response()
         certificate_data = response.data[0]['certificate']
         self.assertEquals(certificate_data['url'], certificate_url)
+
+    @patch.dict(settings.FEATURES, {'CERTIFICATES_HTML_VIEW': False})
+    def test_pdf_certificate_with_html_cert_disabled(self):
+        """
+        Tests PDF certificates with CERTIFICATES_HTML_VIEW set to False.
+        """
+        self.verify_pdf_certificate()
+
+    @patch.dict(settings.FEATURES, {'CERTIFICATES_HTML_VIEW': True})
+    def test_pdf_certificate_with_html_cert_enabled(self):
+        """
+        Tests PDF certificates with CERTIFICATES_HTML_VIEW set to True.
+        """
+        self.verify_pdf_certificate()
+
+    @patch.dict(settings.FEATURES, {'CERTIFICATES_HTML_VIEW': True})
+    def test_web_certificate(self):
+        CourseMode.objects.create(
+            course_id=self.course.id,
+            mode_display_name="Honor",
+            mode_slug=CourseMode.HONOR,
+        )
+        self.login_and_enroll()
+
+        self.course.cert_html_view_enabled = True
+        self.store.update_item(self.course, self.user.id)
+
+        with patch('courseware.grades.grade') as mock_grade:
+            mock_grade.return_value = {'grade': 'Pass', 'percent': 0.75}
+            generate_user_certificates(self.user, self.course.id)
+
+        response = self.api_response()
+        certificate_data = response.data[0]['certificate']
+        self.assertRegexpMatches(
+            certificate_data['url'],
+            r'http.*/certificates/user/{user_id}/course/{course_id}'.format(
+                user_id=self.user.id,
+                course_id=self.course.id,
+            )
+        )
 
     def test_no_facebook_url(self):
         self.login_and_enroll()

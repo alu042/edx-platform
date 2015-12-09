@@ -68,6 +68,7 @@ from config_models.models import ConfigurationModel
 from xmodule_django.models import CourseKeyField, NoneToEmptyManager
 from util.milestones_helpers import fulfill_course_milestone, is_prerequisite_courses_enabled
 from course_modes.models import CourseMode
+from instructor_task.models import InstructorTask
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ class CertificateStatuses(object):
     regenerating = 'regenerating'
     restricted = 'restricted'
     unavailable = 'unavailable'
+    auditing = 'auditing'
 
 
 class CertificateSocialNetworks(object):
@@ -161,7 +163,7 @@ class GeneratedCertificate(models.Model):
 
     user = models.ForeignKey(User)
     course_id = CourseKeyField(max_length=255, blank=True, default=None)
-    verify_uuid = models.CharField(max_length=32, blank=True, default='')
+    verify_uuid = models.CharField(max_length=32, blank=True, default='', db_index=True)
     download_uuid = models.CharField(max_length=32, blank=True, default='')
     download_url = models.CharField(max_length=128, blank=True, default='')
     grade = models.CharField(max_length=5, blank=True, default='')
@@ -236,6 +238,24 @@ class GeneratedCertificate(models.Model):
         self.save()
 
 
+class CertificateGenerationHistory(TimeStampedModel):
+    """
+    Model for storing Certificate Generation History.
+    """
+
+    course_id = CourseKeyField(max_length=255)
+    generated_by = models.ForeignKey(User)
+    instructor_task = models.ForeignKey(InstructorTask)
+    is_regeneration = models.BooleanField(default=False)
+
+    class Meta(object):
+        app_label = "certificates"
+
+    def __unicode__(self):
+        return u"certificates %s by %s on %s for %s" % \
+               ("regenerated" if self.is_regeneration else "generated", self.generated_by, self.created, self.course_id)
+
+
 @receiver(post_save, sender=GeneratedCertificate)
 def handle_post_cert_generated(sender, instance, **kwargs):  # pylint: disable=unused-argument
     """
@@ -282,17 +302,28 @@ def certificate_status_for_student(student, course_id):
             user=student, course_id=course_id)
         cert_status = {
             'status': generated_certificate.status,
-            'mode': generated_certificate.mode
+            'mode': generated_certificate.mode,
+            'uuid': generated_certificate.verify_uuid,
         }
         if generated_certificate.grade:
             cert_status['grade'] = generated_certificate.grade
+
+        if generated_certificate.mode == 'audit':
+            course_mode_slugs = [mode.slug for mode in CourseMode.modes_for_course(course_id)]
+            # Short term fix to make sure old audit users with certs still see their certs
+            # only do this if there if no honor mode
+            if 'honor' not in course_mode_slugs:
+                cert_status['status'] = CertificateStatuses.auditing
+                return cert_status
+
         if generated_certificate.status == CertificateStatuses.downloadable:
             cert_status['download_url'] = generated_certificate.download_url
 
         return cert_status
+
     except GeneratedCertificate.DoesNotExist:
         pass
-    return {'status': CertificateStatuses.unavailable, 'mode': GeneratedCertificate.MODES.honor}
+    return {'status': CertificateStatuses.unavailable, 'mode': GeneratedCertificate.MODES.honor, 'uuid': None}
 
 
 def certificate_info_for_user(user, course_id, grade, user_is_whitelisted=None):
@@ -304,22 +335,18 @@ def certificate_info_for_user(user, course_id, grade, user_is_whitelisted=None):
             user=user, course_id=course_id, whitelist=True
         ).exists()
 
-    eligible_for_certificate = (user_is_whitelisted or grade is not None) and user.profile.allow_certificate
+    certificate_is_delivered = 'N'
+    certificate_type = 'N/A'
+    eligible_for_certificate = 'Y' if (user_is_whitelisted or grade is not None) and user.profile.allow_certificate \
+        else 'N'
 
-    if eligible_for_certificate:
-        user_is_eligible = 'Y'
+    certificate_status = certificate_status_for_student(user, course_id)
+    certificate_generated = certificate_status['status'] == CertificateStatuses.downloadable
+    if certificate_generated:
+        certificate_is_delivered = 'Y'
+        certificate_type = certificate_status['mode']
 
-        certificate_status = certificate_status_for_student(user, course_id)
-        certificate_generated = certificate_status['status'] == CertificateStatuses.downloadable
-        certificate_is_delivered = 'Y' if certificate_generated else 'N'
-
-        certificate_type = certificate_status['mode'] if certificate_generated else 'N/A'
-    else:
-        user_is_eligible = 'N'
-        certificate_is_delivered = 'N'
-        certificate_type = 'N/A'
-
-    return [user_is_eligible, certificate_is_delivered, certificate_type]
+    return [eligible_for_certificate, certificate_is_delivered, certificate_type]
 
 
 class ExampleCertificateSet(TimeStampedModel):
