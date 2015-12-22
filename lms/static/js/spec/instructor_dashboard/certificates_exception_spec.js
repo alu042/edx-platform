@@ -25,7 +25,7 @@ define([
 
             var EXPECTED_ERRORS = {
                 user_name_or_email_required: 'Student username/email field is required and can not be empty. ' +
-                'Kindly fill in username/email and then press "Add Exception" button.'
+                'Kindly fill in username/email and then press "Add to Exception List" button.'
             };
 
             beforeEach(function() {
@@ -98,7 +98,7 @@ define([
                     {
                         id: 1, user_id: 1, user_name: 'test1', user_email: 'test1@test.com',
                         course_id: 'edX/test/course', created: "Thursday, October 29, 2015",
-                        notes: 'test notes for test certificate exception'
+                        notes: 'test notes for test certificate exception', certificate_generated: ''
                     }
                 );
 
@@ -106,7 +106,7 @@ define([
                     {
                         id: 2, user_id: 2, user_name: 'test2', user_email: 'test2@test.com',
                         course_id: 'edX/test/course', created: "Thursday, October 29, 2015",
-                        notes: 'test notes for test certificate exception'
+                        notes: 'test notes for test certificate exception', certificate_generated: ''
                     }
                 );
             });
@@ -142,6 +142,7 @@ define([
                          user_email: "",
                          created: "",
                          notes: "test3 notes",
+                         certificate_generated : '',
                          new: true}
                         ]
                 };
@@ -337,7 +338,7 @@ define([
 
                 var error_messages = {
                     empty_user_name_email: 'Student username/email field is required and can not be empty. ' +
-                    'Kindly fill in username/email and then press "Add Exception" button.',
+                    'Kindly fill in username/email and then press "Add to Exception List" button.',
                     duplicate_user: "<p>" + (duplicate_user) + " already in exception list.</p>"
                 };
 

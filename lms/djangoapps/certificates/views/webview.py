@@ -153,7 +153,7 @@ def _update_context_with_basic_info(context, course_id, platform_name, configura
 
     # Translators:  'All rights reserved' is a legal term used in copyrighting to protect published content
     reserved = _("All rights reserved")
-    context['copyright_text'] = '&copy; {year} {platform_name}. {reserved}.'.format(
+    context['copyright_text'] = u'&copy; {year} {platform_name}. {reserved}.'.format(
         year=settings.COPYRIGHT_YEAR,
         platform_name=platform_name,
         reserved=reserved
@@ -271,7 +271,7 @@ def _update_social_context(request, context, course, user, user_certificate, pla
         )
     )
 
-    share_url = request.build_absolute_uri(get_certificate_url(uuid=user_certificate.verify_uuid))
+    share_url = request.build_absolute_uri(get_certificate_url(course_id=course.id, uuid=user_certificate.verify_uuid))
     context['share_url'] = share_url
     twitter_url = ''
     if context.get('twitter_share_enabled', False):

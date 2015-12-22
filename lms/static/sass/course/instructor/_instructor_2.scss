@@ -303,7 +303,7 @@
     display: none;
 
     p {
-      color: #a2a2a2;
+      color: $gray-d2;
       font-style: italic;
     }
   }
@@ -2105,7 +2105,7 @@ input[name="subject"] {
 // --------------------
 .instructor-dashboard-wrapper-2 section.idash-section#certificates {
 
-  %btn-blue {
+  .btn-blue {
     @extend %btn-primary-blue;
     padding: ($baseline/2.5) ($baseline/2);
     text-shadow: none;
@@ -2118,8 +2118,49 @@ input[name="subject"] {
         border-top-style: groove;
         color: $black;
       }
+  .certificates-wrapper{
+    .message{
+      @extend %exception-message;
+    }
+  }
+
+  p.under-heading {
+    margin: 12px 0 12px 0;
+    line-height: 23px;
+  }
+
+  hr.section-divider{
+    margin: 25px 0;
+    border-top: 7px solid #646464;
+  }
+
+  .certificate-generation-history{
+    table{
+      thead{
+        tr{
+          td.task-name{
+            width: 150px;
+          }
+          td.task-date{
+            width: 200px;
+          }
+        }
+      }
+
+      tbody{
+        tr{
+          td{
+            padding: 5px;
+            vertical-align: middle;
+            text-align: left;;
+          }
+        }
+      }
+    }
+  }
 
   #certificate-white-list-editor {
+    padding-top: 5px;
     .certificate-exception-inputs {
       .student-username-or-email {
         width: 300px;
@@ -2134,16 +2175,14 @@ input[name="subject"] {
       .message {
         @extend %exception-message;
       }
-
-      .button-blue {
-        @extend %btn-blue;
-      }
     }
   }
 
   .white-listed-students {
     margin-top: 10px;
+    padding-top: 5px;
     table {
+      margin-top: 5px;
       width: 100%;
       word-wrap: break-word;
 
@@ -2155,16 +2194,15 @@ input[name="subject"] {
         text-align: left;
         color: $gray;
 
-        &.date, &.email {
-          width: 230px;
-        }
-
-        &.user-id {
-          width: 60px;
+        &.date{
+          width: 150px;
         }
 
         &.user-name {
-          width: 150px;
+          width: 120px;
+        }
+        &.user-email {
+          width: 200px;
         }
 
         &.action {
@@ -2211,10 +2249,6 @@ input[name="subject"] {
       }
     }
 
-    .button-blue {
-        @extend %btn-blue;
-    }
-
     .message {
         @extend %exception-message;
       }
@@ -2225,14 +2259,11 @@ input[name="subject"] {
       border-bottom: 1px groove black;
       display: inline-block;
     }
-    p.under-heading {
-      margin: 12px 0 12px 0;
-      line-height: 23px;
-    }
   }
 
   .bulk-white-list-exception {
     margin-top: 10px;
+    padding-top: 5px;
     .white-list-csv {
       .bulk-exception-results {
         margin-top: 10px;
@@ -2244,15 +2275,12 @@ input[name="subject"] {
         .message {
           padding: 5px 10px;
           margin: 2px;
+          border-top-style: none;
         }
 
       }
       .arrow {
         font-weight: bold;
-      }
-
-      .button-blue {
-        @extend %btn-blue;
       }
     }
   }

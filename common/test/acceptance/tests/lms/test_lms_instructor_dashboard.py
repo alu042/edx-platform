@@ -211,6 +211,10 @@ class ProctoredExamsTest(BaseInstructorDashboardTest):
 
         # open the exam settings to make it a proctored exam.
         self.course_outline.open_exam_settings_dialog()
+
+        # select advanced settings tab
+        self.course_outline.select_advanced_settings_tab()
+
         self.course_outline.make_exam_proctored()
 
         # login as a verified student and visit the courseware.
@@ -233,6 +237,10 @@ class ProctoredExamsTest(BaseInstructorDashboardTest):
 
         # open the exam settings to make it a proctored exam.
         self.course_outline.open_exam_settings_dialog()
+
+        # select advanced settings tab
+        self.course_outline.select_advanced_settings_tab()
+
         self.course_outline.make_exam_timed()
 
         # login as a verified student and visit the courseware.
@@ -673,7 +681,6 @@ class CertificatesTest(BaseInstructorDashboardTest):
         self.certificates_section.add_certificate_exception(self.user_name, notes)
         self.assertIn(self.user_name, self.certificates_section.last_certificate_exception.text)
         self.assertIn(notes, self.certificates_section.last_certificate_exception.text)
-        self.assertIn(str(self.user_id), self.certificates_section.last_certificate_exception.text)
 
         # Verify that added exceptions are also synced with backend
         # Revisit Page
@@ -685,7 +692,6 @@ class CertificatesTest(BaseInstructorDashboardTest):
         # validate certificate exception synced with server is visible in certificate exceptions list
         self.assertIn(self.user_name, self.certificates_section.last_certificate_exception.text)
         self.assertIn(notes, self.certificates_section.last_certificate_exception.text)
-        self.assertIn(str(self.user_id), self.certificates_section.last_certificate_exception.text)
 
     def test_instructor_can_remove_certificate_exception(self):
         """
@@ -701,13 +707,11 @@ class CertificatesTest(BaseInstructorDashboardTest):
         self.certificates_section.add_certificate_exception(self.user_name, notes)
         self.assertIn(self.user_name, self.certificates_section.last_certificate_exception.text)
         self.assertIn(notes, self.certificates_section.last_certificate_exception.text)
-        self.assertIn(str(self.user_id), self.certificates_section.last_certificate_exception.text)
 
         # Remove Certificate Exception
         self.certificates_section.remove_first_certificate_exception()
         self.assertNotIn(self.user_name, self.certificates_section.last_certificate_exception.text)
         self.assertNotIn(notes, self.certificates_section.last_certificate_exception.text)
-        self.assertNotIn(str(self.user_id), self.certificates_section.last_certificate_exception.text)
 
         # Verify that added exceptions are also synced with backend
         # Revisit Page
@@ -719,7 +723,6 @@ class CertificatesTest(BaseInstructorDashboardTest):
         # validate certificate exception synced with server is visible in certificate exceptions list
         self.assertNotIn(self.user_name, self.certificates_section.last_certificate_exception.text)
         self.assertNotIn(notes, self.certificates_section.last_certificate_exception.text)
-        self.assertNotIn(str(self.user_id), self.certificates_section.last_certificate_exception.text)
 
     def test_error_on_duplicate_certificate_exception(self):
         """
@@ -759,7 +762,7 @@ class CertificatesTest(BaseInstructorDashboardTest):
 
         self.assertIn(
             'Student username/email field is required and can not be empty. '
-            'Kindly fill in username/email and then press "Add Exception" button.',
+            'Kindly fill in username/email and then press "Add to Exception List" button.',
             self.certificates_section.message.text
         )
 
