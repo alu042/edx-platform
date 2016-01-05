@@ -84,7 +84,7 @@ class CoursesTest(ModuleStoreTestCase):
         with check_mongo_calls(num_mongo_calls):
             course_access_func(user, 'load', course.id)
 
-    def test_get_courses(self):
+    def test_get_courses_by_org(self):
         """
         Verify that org filtering performs as expected, and that an empty result
         is returned if the org passed by the caller does not match the designated
@@ -130,6 +130,30 @@ class CoursesTest(ModuleStoreTestCase):
             microsite_courses = get_courses(user, org=alternate)
             self.assertTrue(
                 all(course.org == alternate_course.org for course in microsite_courses)
+            )
+
+    def test_get_courses_with_filter(self):
+        """
+        Verify that filtering performs as expected.
+        """
+        user = UserFactory.create()
+        non_mobile_course = CourseFactory.create(emit_signals=True)
+        mobile_course = CourseFactory.create(mobile_available=True, emit_signals=True)
+
+        test_cases = (
+            (None, {non_mobile_course.id, mobile_course.id}),
+            (dict(mobile_available=True), {mobile_course.id}),
+            (dict(mobile_available=False), {non_mobile_course.id}),
+        )
+        for filter_, expected_courses in test_cases:
+            self.assertEqual(
+                {
+                    course.id
+                    for course in
+                    get_courses(user, filter_=filter_)
+                },
+                expected_courses,
+                "testing get_courses with filter_={}".format(filter_),
             )
 
 
@@ -253,7 +277,7 @@ class CoursesRenderTest(ModuleStoreTestCase):
 
     def test_get_course_info_section_render(self):
         # Test render works okay
-        course_info = get_course_info_section(self.request, self.course, 'handouts')
+        course_info = get_course_info_section(self.request, self.request.user, self.course, 'handouts')
         self.assertEqual(course_info, u"<a href='/c4x/edX/toy/asset/handouts_sample_handout.txt'>Sample</a>")
 
         # Test when render raises an exception
@@ -261,7 +285,7 @@ class CoursesRenderTest(ModuleStoreTestCase):
             mock_module_render.return_value = mock.MagicMock(
                 render=mock.Mock(side_effect=Exception('Render failed!'))
             )
-            course_info = get_course_info_section(self.request, self.course, 'handouts')
+            course_info = get_course_info_section(self.request, self.request.user, self.course, 'handouts')
             self.assertIn("this module is temporarily unavailable", course_info)
 
     def test_get_course_about_section_render(self):
@@ -291,7 +315,7 @@ class XmlCoursesRenderTest(ModuleStoreTestCase):
         request = get_request_for_user(UserFactory.create())
 
         # Test render works okay. Note the href is different in XML courses.
-        course_info = get_course_info_section(request, course, 'handouts')
+        course_info = get_course_info_section(request, request.user, course, 'handouts')
         self.assertEqual(course_info, "<a href='/static/toy/handouts/sample_handout.txt'>Sample</a>")
 
         # Test when render raises an exception
@@ -299,7 +323,7 @@ class XmlCoursesRenderTest(ModuleStoreTestCase):
             mock_module_render.return_value = mock.MagicMock(
                 render=mock.Mock(side_effect=Exception('Render failed!'))
             )
-            course_info = get_course_info_section(request, course, 'handouts')
+            course_info = get_course_info_section(request, request.user, course, 'handouts')
             self.assertIn("this module is temporarily unavailable", course_info)
 
 
