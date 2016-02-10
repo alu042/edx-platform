@@ -2,38 +2,46 @@
 Courseware views functions
 """
 
-import logging
 import json
-import textwrap
+import logging
 import urllib
-
 from collections import OrderedDict
 from datetime import datetime
-from django.utils.translation import ugettext as _
 
+import analytics
+import newrelic.agent
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User, AnonymousUser
 from django.core.context_processors import csrf
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User, AnonymousUser
-from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
-from django.utils.timezone import UTC
-from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import redirect
-from certificates import api as certs_api
-from edxmako.shortcuts import render_to_response, render_to_string, marketing_link
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.timezone import UTC
+from django.utils.translation import ugettext as _
 from django.views.decorators.cache import cache_control
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
+from eventtracking import tracker
 from ipware.ip import get_ip
 from markupsafe import escape
+from opaque_keys import InvalidKeyError
+from opaque_keys.edx.keys import CourseKey, UsageKey
+from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from rest_framework import status
-import newrelic.agent
+from xblock.fragment import Fragment
 
+import shoppingcart
+import survey.utils
+import survey.views
+from certificates import api as certs_api
+from openedx.core.lib.gating import api as gating_api
+from course_modes.models import CourseMode
 from courseware import grades
-from courseware.access import has_access, _adjust_start_date_for_beta_testers
+from courseware.access import has_access, has_ccx_coach_role, _adjust_start_date_for_beta_testers
 from courseware.access_response import StartDateError
 from courseware.access_utils import in_preview_mode
 from courseware.courses import (
@@ -49,15 +57,35 @@ from courseware.courses import (
     UserNotEnrolled
 )
 from courseware.masquerade import setup_masquerade
+from courseware.model_data import FieldDataCache, ScoresClient
+from courseware.models import StudentModuleHistory
+from courseware.url_helpers import get_redirect_url
+from courseware.user_state_client import DjangoXBlockUserStateClient
+from edxmako.shortcuts import render_to_response, render_to_string, marketing_link
+from instructor.enrollment import uses_shib
+from microsite_configuration import microsite
+from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from openedx.core.djangoapps.credit.api import (
     get_credit_requirement_status,
     is_user_eligible_for_credit,
     is_credit_course
 )
-from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
-from courseware.models import StudentModuleHistory
-from courseware.model_data import FieldDataCache, ScoresClient
-from .module_render import toc_for_course, get_module_for_descriptor, get_module, get_module_by_usage_id
+from shoppingcart.models import CourseRegistrationCode
+from shoppingcart.utils import is_shopping_cart_enabled
+from openedx.core.djangoapps.self_paced.models import SelfPacedConfiguration
+from student.models import UserTestGroup, CourseEnrollment
+from student.views import is_course_blocked
+from util.cache import cache, cache_if_anonymous
+from util.date_utils import strftime_localized
+from util.db import outer_atomic
+from util.milestones_helpers import get_prerequisite_courses_display
+from util.views import _record_feedback_in_zendesk
+from util.views import ensure_valid_course_key
+from xmodule.modulestore.django import modulestore
+from xmodule.modulestore.exceptions import ItemNotFoundError, NoPathToItem
+from xmodule.tabs import CourseTabList
+from xmodule.x_module import STUDENT_VIEW
+from lms.djangoapps.ccx.custom_exception import CCXLocatorValidationException
 from .entrance_exams import (
     course_has_entrance_exam,
     get_entrance_exam_content,
@@ -65,38 +93,7 @@ from .entrance_exams import (
     user_must_complete_entrance_exam,
     user_has_passed_entrance_exam
 )
-from courseware.user_state_client import DjangoXBlockUserStateClient
-from course_modes.models import CourseMode
-
-from student.models import UserTestGroup, CourseEnrollment
-from student.views import is_course_blocked
-from util.cache import cache, cache_if_anonymous
-from util.date_utils import strftime_localized
-from util.db import outer_atomic
-from xblock.fragment import Fragment
-from xmodule.modulestore.django import modulestore
-from xmodule.modulestore.exceptions import ItemNotFoundError, NoPathToItem
-from xmodule.tabs import CourseTabList
-from xmodule.x_module import STUDENT_VIEW
-import shoppingcart
-from shoppingcart.models import CourseRegistrationCode
-from shoppingcart.utils import is_shopping_cart_enabled
-from opaque_keys import InvalidKeyError
-from util.milestones_helpers import get_prerequisite_courses_display
-from util.views import _record_feedback_in_zendesk
-
-from microsite_configuration import microsite
-from opaque_keys.edx.locations import SlashSeparatedCourseKey
-from opaque_keys.edx.keys import CourseKey, UsageKey
-from instructor.enrollment import uses_shib
-
-import survey.utils
-import survey.views
-
-from util.views import ensure_valid_course_key
-from eventtracking import tracker
-import analytics
-from courseware.url_helpers import get_redirect_url
+from .module_render import toc_for_course, get_module_for_descriptor, get_module, get_module_by_usage_id
 
 from lang_pref import LANGUAGE_KEY
 from openedx.core.djangoapps.user_api.preferences.api import get_user_preference
@@ -402,6 +399,14 @@ def _index_bulk_op(request, course_key, chapter, section, position):
                 and user_must_complete_entrance_exam(request, user, course):
             log.info(u'User %d tried to view course %s without passing entrance exam', user.id, unicode(course.id))
             return redirect(reverse('courseware', args=[unicode(course.id)]))
+
+    # Gated Content Check
+    gated_content = gating_api.get_gated_content(course, user)
+    if section and gated_content:
+        for usage_key in gated_content:
+            if section in usage_key:
+                raise Http404
+
     # check to see if there is a required survey that must be taken before
     # the user can access the course.
     if survey.utils.must_answer_survey(course, user):
@@ -440,6 +445,7 @@ def _index_bulk_op(request, course_key, chapter, section, position):
             'xqa_server': settings.FEATURES.get('XQA_SERVER', "http://your_xqa_server.com"),
             'bookmarks_api_url': bookmarks_api_url,
             'language_preference': language_preference,
+            'disable_optimizely': True,
         }
 
         now = datetime.now(UTC())
@@ -544,8 +550,6 @@ def _index_bulk_op(request, course_key, chapter, section, position):
             context['fragment'] = section_module.render(STUDENT_VIEW, section_render_context)
             context['section_title'] = section_descriptor.display_name_with_default_escaped
         else:
-            # section is none, so display a message
-            studio_url = get_studio_url(course, 'course')
             prev_section = get_current_child(chapter_module)
             if prev_section is None:
                 # Something went wrong -- perhaps this chapter has no sections visible to the user.
@@ -554,22 +558,6 @@ def _index_bulk_op(request, course_key, chapter, section, position):
                 course_module.position = None
                 course_module.save()
                 return redirect(reverse('courseware', args=[course.id.to_deprecated_string()]))
-            prev_section_url = reverse('courseware_section', kwargs={
-                'course_id': course_key.to_deprecated_string(),
-                'chapter': chapter_descriptor.url_name,
-                'section': prev_section.url_name
-            })
-            context['fragment'] = Fragment(content=render_to_string(
-                'courseware/welcome-back.html',
-                {
-                    'course': course,
-                    'studio_url': studio_url,
-                    'chapter_module': chapter_module,
-                    'prev_section': prev_section,
-                    'prev_section_url': prev_section_url
-                }
-            ))
-
         result = render_to_response('courseware/courseware.html', context)
     except Exception as e:
 
@@ -685,6 +673,14 @@ def course_info(request, course_id):
         staff_access = has_access(request.user, 'staff', course)
         masquerade, user = setup_masquerade(request, course_key, staff_access, reset_masquerade_data=True)
 
+        # if user is not enrolled in a course then app will show enroll/get register link inside course info page.
+        show_enroll_banner = request.user.is_authenticated() and not CourseEnrollment.is_enrolled(user, course.id)
+        if show_enroll_banner and hasattr(course_key, 'ccx'):
+            # if course is CCX and user is not enrolled/registered then do not let him open course direct via link for
+            # self registration. Because only CCX coach can register/enroll a student. If un-enrolled user try
+            # to access CCX redirect him to dashboard.
+            return redirect(reverse('dashboard'))
+
         # If the user needs to take an entrance exam to access this course, then we'll need
         # to send them to that specific course module before allowing them into other areas
         if user_must_complete_entrance_exam(request, user, course):
@@ -703,7 +699,6 @@ def course_info(request, course_id):
         if settings.FEATURES.get('ENABLE_MKTG_SITE'):
             url_to_enroll = marketing_link('COURSES')
 
-        show_enroll_banner = request.user.is_authenticated() and not CourseEnrollment.is_enrolled(user, course.id)
         context = {
             'request': request,
             'masquerade_user': user,
@@ -717,6 +712,11 @@ def course_info(request, course_id):
             'url_to_enroll': url_to_enroll,
         }
 
+        # Get the URL of the user's last position in order to display the 'where you were last' message
+        context['last_accessed_courseware_url'] = None
+        if SelfPacedConfiguration.current().enable_course_home_improvements:
+            context['last_accessed_courseware_url'] = get_last_accessed_courseware(course, request)
+
         now = datetime.now(UTC())
         effective_start = _adjust_start_date_for_beta_testers(user, course, course_key)
         if not in_preview_mode() and staff_access and now < effective_start:
@@ -725,6 +725,30 @@ def course_info(request, course_id):
             context['disable_student_access'] = True
 
         return render_to_response('courseware/info.html', context)
+
+
+def get_last_accessed_courseware(course, request):
+    """
+    Return the URL the courseware module that this request's user last
+    accessed, or None if it cannot be found.
+    """
+    field_data_cache = FieldDataCache.cache_for_descriptor_descendents(
+        course.id, request.user, course, depth=2
+    )
+    course_module = get_module_for_descriptor(
+        request.user, request, course, field_data_cache, course.id, course=course
+    )
+    chapter_module = get_current_child(course_module)
+    if chapter_module is not None:
+        section_module = get_current_child(chapter_module)
+        if section_module is not None:
+            url = reverse('courseware_section', kwargs={
+                'course_id': unicode(course.id),
+                'chapter': chapter_module.url_name,
+                'section': section_module.url_name
+            })
+            return url
+    return None
 
 
 @ensure_csrf_cookie
@@ -820,6 +844,13 @@ def course_about(request, course_id):
     """
 
     course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
+
+    if hasattr(course_key, 'ccx'):
+        # if un-enrolled/non-registered user try to access CCX (direct for registration)
+        # then do not show him about page to avoid self registration.
+        # Note: About page will only be shown to user who is not register. So that he can register. But for
+        # CCX only CCX coach can enroll students.
+        return redirect(reverse('dashboard'))
 
     with modulestore().bulk_operations(course_key):
         permission = get_permission_for_course_about()
@@ -918,7 +949,7 @@ def course_about(request, course_id):
 def progress(request, course_id, student_id=None):
     """ Display the progress page. """
 
-    course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
+    course_key = CourseKey.from_string(course_id)
 
     with modulestore().bulk_operations(course_key):
         return _progress(request, course_key, student_id)
@@ -940,13 +971,19 @@ def _progress(request, course_key, student_id):
         return redirect(reverse('course_survey', args=[unicode(course.id)]))
 
     staff_access = bool(has_access(request.user, 'staff', course))
+    try:
+        coach_access = has_ccx_coach_role(request.user, course_key)
+    except CCXLocatorValidationException:
+        coach_access = False
+
+    has_access_on_students_profiles = staff_access or coach_access
 
     if student_id is None or student_id == request.user.id:
         # always allowed to see your own profile
         student = request.user
     else:
         # Requesting access to a different student's profile
-        if not staff_access:
+        if not has_access_on_students_profiles:
             raise Http404
         try:
             student = User.objects.get(id=student_id)

@@ -123,6 +123,7 @@ from eventtracking import tracker
 from notification_prefs.views import enable_notifications
 
 # Note that this lives in openedx, so this dependency should be refactored.
+from openedx.core.djangoapps.credentials.utils import get_user_program_credentials
 from openedx.core.djangoapps.user_api.preferences import api as preferences_api
 from openedx.core.djangoapps.programs.utils import get_programs_for_dashboard
 
@@ -169,7 +170,27 @@ def index(request, extra_context=None, user=AnonymousUser()):
 
     context = {'courses': courses}
 
+    context['homepage_overlay_html'] = microsite.get_value('homepage_overlay_html')
+
+    # This appears to be an unused context parameter, at least for the master templates...
+    context['show_partners'] = microsite.get_value('show_partners', True)
+
+    # TO DISPLAY A YOUTUBE WELCOME VIDEO
+    # 1) Change False to True
+    context['show_homepage_promo_video'] = microsite.get_value('show_homepage_promo_video', False)
+
+    # 2) Add your video's YouTube ID (11 chars, eg "123456789xX"), or specify via microsite config
+    # Note: This value should be moved into a configuration setting and plumbed-through to the
+    # context via the microsite configuration workflow, versus living here
+    youtube_video_id = microsite.get_value('homepage_promo_video_youtube_id', "your-youtube-id")
+    context['homepage_promo_video_youtube_id'] = youtube_video_id
+
+    # allow for microsite override of the courses list
+    context['courses_list'] = microsite.get_template_path('courses_list.html')
+
+    # Insert additional context for use in the template
     context.update(extra_context)
+
     return render_to_response('index.html', context)
 
 
@@ -294,6 +315,8 @@ def _cert_info(user, course_overview, cert_status, course_mode):  # pylint: disa
         CertificateStatuses.notpassing: 'notpassing',
         CertificateStatuses.restricted: 'restricted',
         CertificateStatuses.auditing: 'auditing',
+        CertificateStatuses.audit_passing: 'auditing',
+        CertificateStatuses.audit_notpassing: 'auditing',
     }
 
     default_status = 'processing'
@@ -587,6 +610,7 @@ def dashboard(request):
     # This is passed along in the template context to allow rendering of
     # program-related information on the dashboard.
     course_programs = _get_course_programs(user, [enrollment.course_id for enrollment in course_enrollments])
+    xseries_credentials = _get_xseries_credentials(user)
 
     # Construct a dictionary of course mode information
     # used to render the course list.  We re-use the course modes dict
@@ -710,6 +734,7 @@ def dashboard(request):
         'nav_hidden': True,
         'course_programs': course_programs,
         'disable_courseware_js': True,
+        'xseries_credentials': xseries_credentials,
     }
 
     return render_to_response('dashboard.html', context)
@@ -1346,7 +1371,7 @@ def manage_user_standing(request):
     headers = ['username', 'account_changed_by']
     rows = []
     for user in all_disabled_users:
-        row = [user.username, user.standing.all()[0].changed_by]
+        row = [user.username, user.standing.changed_by]
         rows.append(row)
 
     context = {'headers': headers, 'rows': rows}
@@ -1874,7 +1899,7 @@ def auto_auth(request):
     # the new user object.
     try:
         user, profile, reg = _do_create_account(form)
-    except AccountValidationError:
+    except (AccountValidationError, ValidationError):
         # Attempt to retrieve the existing user.
         user = User.objects.get(username=username)
         user.email = email
@@ -2378,6 +2403,7 @@ def _get_course_programs(user, user_enrolled_courses):  # pylint: disable=invali
                     'course_count': len(program['course_codes']),
                     'display_name': program['name'],
                     'category': program.get('category'),
+                    'program_id': program['id'],
                     'program_marketing_url': urljoin(
                         settings.MKTG_URLS.get('ROOT'), 'xseries' + '/{}'
                     ).format(program['marketing_slug']),
@@ -2387,3 +2413,34 @@ def _get_course_programs(user, user_enrolled_courses):  # pylint: disable=invali
                 log.warning('Program structure is invalid, skipping display: %r', program)
 
     return programs_data
+
+
+def _get_xseries_credentials(user):
+    """Return program credentials data required for display on
+    the learner dashboard.
+
+    Given a user, find all programs for which certificates have been earned
+    and return list of dictionaries of required program data.
+
+    Arguments:
+        user (User): user object for getting programs credentials.
+
+    Returns:
+        list of dict, containing data corresponding to the programs for which
+        the user has been awarded a credential.
+    """
+    programs_credentials = get_user_program_credentials(user)
+    credentials_data = []
+    for program in programs_credentials:
+        if program.get('category') == 'xseries':
+            try:
+                program_data = {
+                    'display_name': program['name'],
+                    'subtitle': program['subtitle'],
+                    'credential_url': program['credential_url'],
+                }
+                credentials_data.append(program_data)
+            except KeyError:
+                log.warning('Program structure is invalid: %r', program)
+
+    return credentials_data

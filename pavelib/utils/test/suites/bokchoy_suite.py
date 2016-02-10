@@ -68,7 +68,7 @@ class BokChoyTestSuite(TestSuite):
         self.report_dir.makedirs_p()
         test_utils.clean_reports_dir()      # pylint: disable=no-value-for-parameter
 
-        if not (self.fasttest or self.skip_clean):
+        if not (self.fasttest or self.skip_clean or self.testsonly):
             test_utils.clean_test_files()
 
         msg = colorize('green', "Checking for mongo, memchache, and mysql...")
@@ -100,12 +100,16 @@ class BokChoyTestSuite(TestSuite):
     def __exit__(self, exc_type, exc_value, traceback):
         super(BokChoyTestSuite, self).__exit__(exc_type, exc_value, traceback)
 
-        msg = colorize('green', "Cleaning up databases...")
-        print msg
-
-        # Clean up data we created in the databases
-        sh("./manage.py lms --settings bok_choy flush --traceback --noinput")
-        bokchoy_utils.clear_mongo()
+        # Using testsonly will leave all fixtures in place (Note: the db will also be dirtier.)
+        if self.testsonly:
+            msg = colorize('green', 'Running in testsonly mode... SKIPPING database cleanup.')
+            print msg
+        else:
+            # Clean up data we created in the databases
+            msg = colorize('green', "Cleaning up databases...")
+            print msg
+            sh("./manage.py lms --settings bok_choy flush --traceback --noinput")
+            bokchoy_utils.clear_mongo()
 
     def verbosity_processes_string(self):
         """

@@ -3,6 +3,8 @@ Tests for Blocks api.py
 """
 
 from django.test.client import RequestFactory
+
+from course_blocks.tests.helpers import EnableTransformerRegistryMixin
 from student.tests.factories import UserFactory
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
@@ -11,7 +13,7 @@ from xmodule.modulestore.tests.factories import SampleCourseFactory
 from ..api import get_blocks
 
 
-class TestGetBlocks(SharedModuleStoreTestCase):
+class TestGetBlocks(EnableTransformerRegistryMixin, SharedModuleStoreTestCase):
     """
     Tests for the get_blocks function
     """
@@ -42,3 +44,17 @@ class TestGetBlocks(SharedModuleStoreTestCase):
     def test_no_user(self):
         blocks = get_blocks(self.request, self.course.location)
         self.assertIn(unicode(self.html_block.location), blocks['blocks'])
+
+    def test_access_before_api_transformer_order(self):
+        """
+        Tests the order of transformers: access checks are made before the api
+        transformer is applied.
+        """
+        blocks = get_blocks(self.request, self.course.location, self.user, nav_depth=5, requested_fields=['nav_depth'])
+        vertical_block = self.store.get_item(self.course.id.make_usage_key('vertical', 'vertical_x1a'))
+        problem_block = self.store.get_item(self.course.id.make_usage_key('problem', 'problem_x1a_1'))
+
+        vertical_descendants = blocks['blocks'][unicode(vertical_block.location)]['descendants']
+
+        self.assertIn(unicode(problem_block.location), vertical_descendants)
+        self.assertNotIn(unicode(self.html_block.location), vertical_descendants)

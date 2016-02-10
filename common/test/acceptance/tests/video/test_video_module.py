@@ -132,7 +132,7 @@ class VideoBaseTest(UniqueCourseTest):
         self.auth_page.visit()
         self.user_info = self.auth_page.user_info
         self.course_info_page.visit()
-        self.tab_nav.go_to_tab('Courseware')
+        self.tab_nav.go_to_tab('Course')
 
     def _navigate_to_courseware_video_and_render(self):
         """ Wait for the video player to render """
@@ -1172,11 +1172,13 @@ class YouTubeQualityTest(VideoBaseTest):
 
         self.video.click_player_button('play')
 
+        self.video.wait_for(lambda: self.video.is_quality_button_visible, 'waiting for quality button to appear')
+
         self.assertFalse(self.video.is_quality_button_active)
 
         self.video.click_player_button('quality')
 
-        self.assertTrue(self.video.is_quality_button_active)
+        self.video.wait_for(lambda: self.video.is_quality_button_active, 'waiting for quality button activation')
 
 
 @attr('a11y')

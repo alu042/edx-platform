@@ -24,7 +24,6 @@ from opaque_keys.edx.locations import Location
 
 from .component import (
     ADVANCED_COMPONENT_TYPES,
-    SPLIT_TEST_COMPONENT_TYPE,
 )
 from .item import create_xblock_info
 from .library import LIBRARIES_ENABLED
@@ -71,7 +70,7 @@ from openedx.core.djangoapps.programs.utils import get_programs
 from openedx.core.djangoapps.self_paced.models import SelfPacedConfiguration
 from openedx.core.lib.course_tabs import CourseTabPluginManager
 from openedx.core.lib.courses import course_image_url
-from openedx.core.lib.js_utils import escape_json_dumps
+from openedx.core.djangolib.js_utils import dump_js_escaped_json
 from student import auth
 from student.auth import has_course_author_access, has_studio_write_access, has_studio_read_access
 from student.roles import (
@@ -325,10 +324,10 @@ def course_search_index_handler(request, course_key_string):
         try:
             reindex_course_and_check_access(course_key, request.user)
         except SearchIndexingError as search_err:
-            return HttpResponse(escape_json_dumps({
+            return HttpResponse(dump_js_escaped_json({
                 "user_message": search_err.error_list
             }), content_type=content_type, status=500)
-        return HttpResponse(escape_json_dumps({
+        return HttpResponse(dump_js_escaped_json({
             "user_message": _("Course has been successfully reindexed.")
         }), content_type=content_type, status=200)
 
@@ -359,7 +358,7 @@ def get_in_process_course_actions(request):
     ]
 
 
-def _staff_accessible_course_list(request):
+def _accessible_courses_summary_list(request):
     """
     List all courses available to the logged in user by iterating through all the courses
     """
@@ -622,14 +621,14 @@ def get_courses_accessible_to_user(request):
     """
     if GlobalStaff().has_user(request.user):
         # user has global access so no need to get courses from django groups
-        courses, in_process_course_actions = _staff_accessible_course_list(request)
+        courses, in_process_course_actions = _accessible_courses_summary_list(request)
     else:
         try:
             courses, in_process_course_actions = _accessible_courses_list_from_groups(request)
         except AccessListFallback:
             # user have some old groups or there was some error getting courses from django groups
             # so fallback to iterating through all courses
-            courses, in_process_course_actions = _accessible_courses_list(request)
+            courses, in_process_course_actions = _accessible_courses_summary_list(request)
     return courses, in_process_course_actions
 
 
@@ -1598,8 +1597,8 @@ def are_content_experiments_enabled(course):
     Returns True if content experiments have been enabled for the course.
     """
     return (
-        SPLIT_TEST_COMPONENT_TYPE in ADVANCED_COMPONENT_TYPES and
-        SPLIT_TEST_COMPONENT_TYPE in course.advanced_modules
+        'split_test' in ADVANCED_COMPONENT_TYPES and
+        'split_test' in course.advanced_modules
     )
 
 

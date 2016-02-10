@@ -1,5 +1,5 @@
 """
-Install Python, Ruby, and Node prerequisites.
+Install Python and Node prerequisites.
 """
 
 from distutils import sysconfig
@@ -24,6 +24,7 @@ PYTHON_REQ_FILES = [
     'requirements/edx/github.txt',
     'requirements/edx/local.txt',
     'requirements/edx/base.txt',
+    'requirements/edx/paver.txt',
     'requirements/edx/post.txt',
 ]
 
@@ -120,13 +121,6 @@ def prereq_cache(cache_name, paths, install_func):
         print '{cache} unchanged, skipping...'.format(cache=cache_name)
 
 
-def ruby_prereqs_installation():
-    """
-    Installs Ruby prereqs
-    """
-    sh('bundle install --quiet')
-
-
 def node_prereqs_installation():
     """
     Configures npm and installs Node prerequisites
@@ -143,18 +137,6 @@ def python_prereqs_installation():
     """
     for req_file in PYTHON_REQ_FILES:
         sh("pip install -q --disable-pip-version-check --exists-action w -r {req_file}".format(req_file=req_file))
-
-
-@task
-def install_ruby_prereqs():
-    """
-    Installs Ruby prereqs
-    """
-    if no_prereq_install():
-        print NO_PREREQ_MESSAGE
-        return
-
-    prereq_cache("Ruby prereqs", ["Gemfile"], ruby_prereqs_installation)
 
 
 @task
@@ -258,13 +240,12 @@ def install_python_prereqs():
 @task
 def install_prereqs():
     """
-    Installs Ruby, Node and Python prerequisites
+    Installs Node and Python prerequisites
     """
     if no_prereq_install():
         print NO_PREREQ_MESSAGE
         return
 
-    install_ruby_prereqs()
     install_node_prereqs()
     uninstall_python_packages()
     install_python_prereqs()
