@@ -164,7 +164,7 @@ def uninstall_python_packages():
     """
     # So that we don't constantly uninstall things, use a version number of the
     # uninstallation needs.  Check it, and skip this if we're up to date.
-    expected_version = 2
+    expected_version = 3
     state_file_path = os.path.join(PREREQS_STATE_DIR, "python_uninstall_version.txt")
     if os.path.isfile(state_file_path):
         with open(state_file_path) as state_file:
@@ -195,7 +195,7 @@ def uninstall_python_packages():
             uninstalled = True
 
         # Uninstall django-oauth2-provider
-        if any("django-oauth2-provider==" in line for line in frozen):
+        if any(line.startswith("django-oauth2-provider==") for line in frozen):
             sh("pip uninstall --disable-pip-version-check -y django-oauth2-provider")
             uninstalled = True
 
