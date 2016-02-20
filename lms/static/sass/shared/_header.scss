@@ -148,8 +148,10 @@ header.global {
       position: relative;
       text-transform: none;
       font-size: 14px;
-      font-weight: bold;
+      font-weight: none;
       letter-spacing: 0;
+      color: $white;
+      margin-right: 5px;
 
       .icon {
         display: inline-block;
