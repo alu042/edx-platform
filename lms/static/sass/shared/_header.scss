@@ -285,7 +285,7 @@ header.global {
       margin: 0 $baseline+1 0 0;
       font-size: em(14);
       font-weight: 600;
-      text-transform: uppercase;
+      text-transform: none;
       letter-spacing: 0 !important;
 
       &:last-child {
