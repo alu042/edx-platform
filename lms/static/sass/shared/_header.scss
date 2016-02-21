@@ -321,7 +321,7 @@ header.global {
 
   .nav-courseware {
     @include float(right);
-    margin-top: ($baseline/4);
+    margin-top: 10px;
     list-style: none;
 
     li, div {
