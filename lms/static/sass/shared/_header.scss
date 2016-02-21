@@ -195,7 +195,7 @@ header.global {
 
     .dropdown {
       font-size: $body-font-size;
-      padding: 0 ($baseline/2);
+      padding: 0 10px;
       color: $base-font-color;
       border: none;
       background: $white;
@@ -530,8 +530,10 @@ header.global-new {
       }
       div {
         margin-top: 3px;
+        padding-top: 10px;
         float: right;
         margin-left: 4px;
+        margin-right: 10px;
       }
       div {
         margin-top: 3px;
