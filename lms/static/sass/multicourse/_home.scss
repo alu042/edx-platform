@@ -43,6 +43,7 @@ $course-search-input-height: ($button-size);
       padding: ($baseline) ($baseline*1.5);
       min-height: ($baseline*6);
       vertical-align: top;
+      opacity: 0.9;
 
       // STATE: hover and focus
       &:hover, &:focus {
