@@ -138,7 +138,7 @@ header.global.slim {
       position: absolute;
       @include right(3px);
       top: 0;
-      width: 1px;
+      width: 0px;
     }
 
     &:after {
