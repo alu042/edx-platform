@@ -1,8 +1,12 @@
 <%! from django.utils.translation import ugettext as _ %>
 
-Hei {full_name}
+${_("Hei {full_name}").format(full_name=full_name)}
 
-Du har blitt invitert som betatester i {course_name} ved AkademiX av et medlem av kurs-staben. 
+${_("Du har blitt invitert til å bli betatester for {course_name} på {site_name} av et medlem av"
+	"kurs-staben.").format(
+		course_name=course.display_name_with_default,
+		site_name=site_name
+	)}
 
 ##${_("Dear {full_name}").format(full_name=full_name)}
 
@@ -14,23 +18,33 @@ Du har blitt invitert som betatester i {course_name} ved AkademiX av et medlem a
 
 % if auto_enroll:
 
-Besøk {cours_url} for å tilgang til kursmaterialet. 
+
+${_("Gå til {course_url} for å få tilgang til kursmaterialet.").format(
+		course_url=course_url
+	)}
 
 ##${_("To start accessing course materials, please visit {course_url}").format(
 ##		course_url=course_url
 ##	)}
 % elif course_about_url is not None:
-Besøk {cours_about_url} for å melde på kurset og starte betatestingen.
+
+${_("Gå til {course_about_url} for å melde deg på kurset og starte betatestingen.").format(course_about_url=course_about_url)}
 
 ##${_("Visit {course_about_url} to join the course and begin the beta test.").format(course_about_url=course_about_url)}
 % else:
-Besøk {site_name} for å melde deg på kurset og starte betatestingen.
+
+${_("Gå til {site_name} for å melde deg på kurset og starte betatestingen.").format(site_name=site_name)}
 
 ##${_("Visit {site_name} to enroll in the course and begin the beta test.").format(site_name=site_name)}
 % endif
 
 ----
-Denne eposten ble sendt automatisk fra {site_name} til {email_address}.
+
+
+${_("Denne eposten ble sendt automatisk fra {site_name} til"
+    {"{email_address}").format(
+		site_name=site_name, email_address=email_address
+	)}
 
 ##${_("This email was automatically sent from {site_name} to "
 ##	"{email_address}").format(
