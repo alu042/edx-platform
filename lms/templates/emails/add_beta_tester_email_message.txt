@@ -41,7 +41,7 @@ ${_("Gå til {site_name} for å melde deg på kurset og starte betatestingen.").
 ----
 
 
-${_("Denne eposten ble sendt automatisk fra {site_name} til"
+${_("Denne eposten ble sendt automatisk fra {site_name} til "
     {"{email_address}").format(
 		site_name=site_name, email_address=email_address
 	)}
