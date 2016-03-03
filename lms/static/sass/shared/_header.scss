@@ -8,7 +8,7 @@ header.global {
   background: $header-bg;
   position: relative;
   width: 100%;
-  height: 76px;
+  height: 96px;
 
   .wrapper-header {
     @include clearfix();
@@ -89,7 +89,7 @@ header.global {
       @include background-image($button-bg-image);
       background-color: $button-bg-color;
       @include box-sizing(border-box);
-      box-shadow: 0 1px 0 0 rgba(255,255,255, 0.6);
+      box-shadow: 0 0 0 0 rgba(255,255,255, 0.6);
       color: $base-font-color;
       display: inline-block;
       font-family: $sans-serif;
@@ -99,7 +99,7 @@ header.global {
       padding: 10px 12px;
       text-decoration: none;
       text-transform: uppercase;
-      text-shadow: 0 1px rgba(255,255,255, 0.6);
+      text-shadow: none;
       vertical-align: middle;
 
       &:last-child {
@@ -107,7 +107,7 @@ header.global {
       }
 
       &:hover, &:focus, &:active {
-        background: $button-bg-hover-color;
+        background: $link-color;
       }
     }
   }
@@ -148,8 +148,11 @@ header.global {
       position: relative;
       text-transform: none;
       font-size: 14px;
-      font-weight: bold;
+      font-weight: none;
       letter-spacing: 0;
+      color: $white;
+      margin-right: 5px;
+      margin-top: 20px;
 
       .icon {
         display: inline-block;
@@ -177,6 +180,7 @@ header.global {
         margin-top: 3px;
         float: right;
         margin-left: 4px;
+        margin-right: 10px;
       }
       div {
         margin-top: 3px;
@@ -193,12 +197,14 @@ header.global {
 
     .dropdown {
       font-size: $body-font-size;
-      padding: 0 ($baseline/2);
+      padding: 0 10px;
       color: $base-font-color;
       border: none;
       background: $white;
       box-shadow: none;
       text-shadow: none;
+      margin-top: 22px;
+      margin-left: 10px;
     }
 
     .dropdown-menu {
@@ -207,7 +213,7 @@ header.global {
       box-shadow: 0 2px 2px 0 rgba(0,0,0, 0.3);
       border: 1px solid $gray-l3;
       display: none;
-      margin-top: 0;
+      margin-top: 20px;
       padding: 5px 10px;
       position: absolute;
       @include right(0px);
@@ -273,7 +279,7 @@ header.global {
   }
 
   .nav-global {
-    margin-top: ($baseline/2);
+    margin-top: 28px;
     list-style: none;
     @include float(left);
 
@@ -283,7 +289,7 @@ header.global {
       margin: 0 $baseline+1 0 0;
       font-size: em(14);
       font-weight: 600;
-      text-transform: uppercase;
+      text-transform: none;
       letter-spacing: 0 !important;
 
       &:last-child {
@@ -293,7 +299,7 @@ header.global {
       a {
         display:block;
         padding: ($baseline/4);
-        color: $link-color;
+        color: $link-color-header;
         font-weight: 600;
 
         &:hover, &:focus, &:active {
@@ -319,7 +325,7 @@ header.global {
 
   .nav-courseware {
     @include float(right);
-    margin-top: ($baseline/4);
+    margin-top: 22px;
     list-style: none;
 
     li, div {
@@ -528,8 +534,10 @@ header.global-new {
       }
       div {
         margin-top: 3px;
+        padding-top: 10px;
         float: right;
         margin-left: 4px;
+        margin-right: 10px;
       }
       div {
         margin-top: 3px;
