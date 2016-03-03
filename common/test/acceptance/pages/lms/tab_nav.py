@@ -36,6 +36,7 @@ class TabNavPage(PageObject):
         self.wait_for_page()
         self._is_on_tab_promise(tab_name).fulfill()
 
+             
     def is_on_tab(self, tab_name):
         """
         Return a boolean indicating whether the current tab is `tab_name`.
