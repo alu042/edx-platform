@@ -41,8 +41,7 @@ requirejs.config({
         "draggabilly": "xmodule_js/common_static/js/vendor/draggabilly.pkgd",
         "domReady": "xmodule_js/common_static/js/vendor/domReady",
         "URI": "xmodule_js/common_static/js/vendor/URI.min",
-
-	"mathjax": "//cdn.mathjax.org/mathjax/2.6-latest/MathJax.js?config=TeX-MML-AM_CHTML&delayStartupUntil=configured",
+        "mathjax": "//cdn.mathjax.org/mathjax/2.6-latest/MathJax.js?config=TeX-MML-AM_CHTML&delayStartupUntil=configured",
         "youtube": "//www.youtube.com/player_api?noext",
 
         "coffee/src/ajax_prefix": "xmodule_js/common_static/coffee/src/ajax_prefix"
