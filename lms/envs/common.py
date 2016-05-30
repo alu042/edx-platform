@@ -1178,7 +1178,6 @@ STATICFILES_STORAGE = 'openedx.core.storage.ProductionStorage'
 # List of finder classes that know how to find static files in various locations.
 # Note: the pipeline finder is included to be able to discover optimized files
 STATICFILES_FINDERS = [
-    'openedx.core.djangoapps.theming.finders.ComprehensiveThemeFinder',
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
     'pipeline.finders.PipelineFinder',
@@ -2598,9 +2597,6 @@ PROFILE_IMAGE_SECRET_KEY = 'placeholder secret key'
 PROFILE_IMAGE_MAX_BYTES = 1024 * 1024
 PROFILE_IMAGE_MIN_BYTES = 100
 
-# This is to check the domain in case of preview.
-PREVIEW_DOMAIN = 'preview'
-
 # Sets the maximum number of courses listed on the homepage
 # If set to None, all courses will be listed on the homepage
 HOMEPAGE_COURSE_MAX = None
@@ -2680,3 +2676,10 @@ CCX_MAX_STUDENTS_ALLOWED = 200
 # financial assistance form
 FINANCIAL_ASSISTANCE_MIN_LENGTH = 800
 FINANCIAL_ASSISTANCE_MAX_LENGTH = 2500
+
+# Deprecated xblock types
+DEPRECATED_ADVANCED_COMPONENT_TYPES = []
+
+# Cutoff date for granting audit certificates
+
+AUDIT_CERT_CUTOFF_DATE = None
