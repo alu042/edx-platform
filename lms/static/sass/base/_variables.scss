@@ -422,6 +422,7 @@ $action-secondary-disabled-fg: $white !default;
 // actions - misc
 $link-color: $blue !default;
 $link-color-d1: $blue !default;
+$link-color-header: $white !default;
 $link-hover: $blue-l1 !default; // from our Pattern Library http://ux.edx.org/elements/colors/
 $site-status-color: $pink !default;
 $button-color: $blue !default;
@@ -436,7 +437,7 @@ $container-bg: $white !default;
 
 // header
 $header-image: linear-gradient(-90deg, rgba(255,255,255, 1), rgba(230,230,230, 0.9)) !default;
-$header-bg: $white !default;
+$header-bg: rgb(60,85,108) !default;
 $header-graphic-super-color: $m-blue-d1;
 $header-graphic-sub-color: $m-gray-d2;
 $header-sans-serif: 'Open Sans', Arial, Helvetica, sans-serif !default;
@@ -469,7 +470,7 @@ $course-card-height: ($baseline*18) !default;
 $course-image-height: ($baseline*8) !default;
 $course-info-height: ($baseline*10) !default;
 $course-title-height: ($baseline*3.6) !default;
-$homepage-bg-image: none !default;
+$homepage-bg-image: url('#{$static-path}/images/edx-theme/bergen.png') !default;
 $login-banner-image: url('#{$static-path}/images/edx-theme/edx-background-banner-account.png') !default;
 $register-banner-image: url('#{$static-path}/images/edx-theme/edx-background-banner-account.png') !default;
 $passwordreset-banner-image: url('#{$static-path}/images/edx-theme/edx-background-banner-account.png') !default;
