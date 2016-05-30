@@ -73,10 +73,10 @@
 
 header.global.slim {
   box-shadow: 0 1px 2px $shadow-l1;
-  height: auto;
+  height: 55px;
   padding: ($baseline/4) 0 ($baseline/2) 0;
   border-bottom: 1px solid $outer-border-color;
-  background: $header-bg;
+  background: #3c556c;
 
   .wrapper-header {
     padding-top: ($baseline/4);
@@ -138,7 +138,7 @@ header.global.slim {
       position: absolute;
       @include right(3px);
       top: 0;
-      width: 1px;
+      width: 0px;
     }
 
     &:after {
@@ -149,7 +149,7 @@ header.global.slim {
       position: absolute;
       right: 0;
       top: 0;
-      width: 1px;
+      width: 0;
     }
 
     img {
@@ -167,13 +167,13 @@ header.global.slim {
     width: 65%;
     @include float(left);
     font-size: 0.9em;
-    font-weight: 600;
-    color: $lighter-base-font-color;
+    font-weight: 400;
+    color: $white;
     letter-spacing: 0;
-    margin-top: 9px;
+    margin-top: 24px;
     margin-bottom: 0;
     text-transform: none;
-    text-shadow: 0 1px 0 #fff;
+    text-shadow: none;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
