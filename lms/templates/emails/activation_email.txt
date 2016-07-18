@@ -1,7 +1,7 @@
 <%namespace file="../main.html" import="stanford_theme_enabled" />
 <%! from django.utils.translation import ugettext as _ %>
 
-Velkommen til AkademiX! Din konto er opprettet, men den må aktiveres før du kan ta i bruk AkademiX. Trykk på linken nedenfor. 
+Velkommen til AkademiX! Din konto er opprettet, men den må aktiveres før du kan ta den i bruk. Trykk på linken nedenfor. 
 
 ##${_("Thank you for signing up for {platform_name}.").format(platform_name=settings.PLATFORM_NAME)}
 ##
