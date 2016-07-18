@@ -25,7 +25,7 @@ $course-search-input-height: ($button-size);
 
     .outer-wrapper {
       @include clearfix();
-      @extend .animation-home-header-pop-up;
+//      @extend .animation-home-header-pop-up;
       position: relative;
       margin: 0 auto;
       padding: ($baseline*3);
@@ -36,7 +36,7 @@ $course-search-input-height: ($button-size);
       @include span-columns(8);
       @include shift(2);
       @include box-sizing(border-box);
-//      @include transition(all 0.2s linear 0s);
+      @include transition(all 0.2s linear 0s);
       position: relative;
       box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.5);
       background: $white;
