@@ -1,8 +1,10 @@
 <%! from django.utils.translation import ugettext as _ %>
 
 
-Velkommen til AkademiX! Du har blitt invitert som betatester av kurset {course_name} på https://beta.akademix.no. Din konto er opprettet, men den må aktiveres før du kan ta den i bruk. Trykk på linken nedenfor. 
-
+${_("Velkommen til AkademiX! Du har blitt invitert som betatester av kurset {course_name} på {site_name}.").format(
+		course_name=course.display_name_with_default_escaped,
+		site_name=site_name
+	)}
 
 ##${_("Dear {full_name}").format(full_name=full_name)}
 ##
@@ -14,19 +16,26 @@ Velkommen til AkademiX! Du har blitt invitert som betatester av kurset {course_n
 ##
 % if auto_enroll:
 
-For å starte kurset, gå til {course_url}.
+${_("For å starte kurset, gå til {course_url}").format(
+		course_url=course_url
+	)}
+
+
 ##${_("To start accessing course materials, please visit {course_url}").format(
 ##		course_url=course_url
 ##	)}
 
 % elif course_about_url is not None:
 
-Gå til {course_about_url} for å melde deg på kurset og starte betatestingen.
+${_("Gå til {course_about_url} for å melde deg på kurset og starte betatestingen.").format(course_about_url=course_about_url)}
+
 ##${_("Visit {course_about_url} to join the course and begin the beta test.").format(course_about_url=course_about_url)}
 
 % else:
 
-Gå til {site`name} for å melde deg på kurset og starte betatestingen.
+
+${_("Gå til {site_name} for å melde deg på kurset og starte betatestingen.").format(site_name=site_name)}
+
 ##${_("Visit {site_name} to enroll in the course and begin the beta test.").format(site_name=site_name)}
 
 % endif
