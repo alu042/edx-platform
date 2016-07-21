@@ -58,6 +58,6 @@ Dersom du ikke har bedt om brukerkonto behøver du ikke foreta deg noe som helst
 
 Hilsen AkademiX
 
-http://${ site }
+https://${ site }
 
 % endif
