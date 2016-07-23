@@ -92,10 +92,7 @@ FEATURES = {
     # whether to use password policy enforcement or not
     'ENFORCE_PASSWORD_POLICY': True,
 
-    'PASSWORD_MIN_LENGTH': 4,
-    'PASSWORD_MAX_LENGTH': 30,
-    'PASSWORD_DICTIONARY': ['password', 'passord', 'abcdef', 'secret', 'hemmelig'],
-    
+   
 
     # If set to True, Studio won't restrict the set of advanced components
     # to just those pre-approved by edX
@@ -190,6 +187,15 @@ FEATURES = {
 }
 
 ENABLE_JASMINE = False
+
+
+#### PASSWORD POLICY SETTINGS #####
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_MAX_LENGTH = None
+PASSWORD_COMPLEXITY = {"UPPER": 1, "LOWER": 1, "DIGITS": 1}
+PASSWORD_DICTIONARY_EDIT_DISTANCE_THRESHOLD = None
+PASSWORD_DICTIONARY = []
+
 
 ############################# SOCIAL MEDIA SHARING #############################
 SOCIAL_SHARING_SETTINGS = {
